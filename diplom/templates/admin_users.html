@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Пользователи{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Управление пользователями</h2>
+    <table class="table table-bordered mt-4">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Имя пользователя</th>
+                <th>Email</th>
+                <th>Роль</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>{% if user.is_admin %}<span class="badge bg-success">Админ</span>{% else %}Пользователь{% endif %}</td>
+                <td>
+                    <button class="btn btn-warning btn-sm reset-password-btn" data-user-id="{{ user.id }}">Сбросить пароль</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div id="resetResult" style="display:none;" class="alert alert-info mt-3"></div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.querySelectorAll('.reset-password-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        if (!confirm('Сбросить пароль для этого пользователя?')) return;
+        const userId = this.getAttribute('data-user-id');
+        fetch(`/admin/reset_password/${userId}`, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const resultDiv = document.getElementById('resetResult');
+            if (data.success) {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'alert alert-success mt-3';
+                resultDiv.textContent = 'Новый пароль: ' + data.new_password;
+            } else {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'alert alert-danger mt-3';
+                resultDiv.textContent = data.error || 'Ошибка сброса пароля';
+            }
+        })
+        .catch(() => {
+            const resultDiv = document.getElementById('resetResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'alert alert-danger mt-3';
+            resultDiv.textContent = 'Ошибка сброса пароля';
+        });
+    });
+});
+</script>
+{% endblock %} 

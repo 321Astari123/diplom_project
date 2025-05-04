@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Библиотека{% endblock %}
+
+{% block extra_css %}
+<style>
+    .book-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .book-cover {
+        height: 300px;
+        object-fit: cover;
+        background-color: #f8f9fa;
+    }
+    
+    .book-cover-placeholder {
+        height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f8f9fa;
+    }
+    
+    .book-card-body {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .book-card-footer {
+        margin-top: auto;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .genre-filter-form {
+        max-width: 300px;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-4">Библиотека</h1>
+        {% if current_user.is_authenticated and current_user.is_admin %}
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+            <i class="fas fa-upload me-2"></i>Загрузить книгу
+        </button>
+        {% endif %}
+    </div>
+    
+    <!-- Фильтр по жанрам через select -->
+    <form method="get" class="genre-filter-form">
+        <label for="genreSelect" class="form-label">Фильтр по жанру:</label>
+        <select id="genreSelect" name="genre" class="form-select" onchange="this.form.submit()">
+            <option value="" {% if not current_genre %}selected{% endif %}>Все жанры</option>
+            {% for genre in genres %}
+            <option value="{{ genre }}" {% if current_genre == genre %}selected{% endif %}>
+                {{ genre_translations.get(genre, genre) }}
+            </option>
+            {% endfor %}
+        </select>
+    </form>
+    
+    {% if books %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
+        {% for book in books %}
+        <div class="col">
+            <div class="card book-card">
+                {% if book.cover_path and (book.cover_path|length > 0) %}
+                <img src="{{ url_for('static', filename='uploads/covers/' + book.cover_path) }}" 
+                     class="card-img-top book-cover" alt="{{ book.title }}"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="book-cover-placeholder" style="display:none;">
+                    <i class="fas fa-book fa-3x text-muted"></i>
+                </div>
+                {% else %}
+                <div class="book-cover-placeholder">
+                    <i class="fas fa-book fa-3x text-muted"></i>
+                </div>
+                {% endif %}
+                <div class="card-body book-card-body">
+                    <h5 class="card-title">{{ book.title }}</h5>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            <i class="fas fa-user me-1"></i>{{ book.author }}
+                        </small>
+                    </p>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            <i class="fas fa-tag me-1"></i>
+                            <a href="{{ url_for('books.library', genre=book.genre) }}" 
+                               class="text-decoration-none">
+                                {{ genre_translations.get(book.genre, 'Без жанра') }}
+                            </a>
+                        </small>
+                    </p>
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" 
+                             style="width: {{ book.progress }}%">
+                            {{ book.progress }}%
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer book-card-footer">
+                    <a href="{{ url_for('books.read_book', book_id=book.id) }}" 
+                       class="btn btn-primary w-100">
+                        <i class="fas fa-book-open me-2"></i>Читать
+                    </a>
+                    {% if current_user.is_authenticated and current_user.is_admin %}
+                    <button class="btn btn-danger w-100 mt-2 delete-book-btn" data-book-id="{{ book.id }}">
+                        <i class="fas fa-trash-alt me-2"></i>Удалить
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-book fa-5x text-muted mb-4"></i>
+        <h3>Библиотека пуста</h3>
+        <p class="text-muted">Здесь пока нет книг</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Модальное окно загрузки -->
+{% if current_user.is_authenticated and current_user.is_admin %}
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Загрузка книги</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="bookFile" class="form-label">Выберите файл (FB2 или EPUB)</label>
+                        <input type="file" class="form-control" id="bookFile" name="file" 
+                               accept=".fb2,.epub" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="uploadButton">
+                    <i class="fas fa-upload me-2"></i>Загрузить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadButton = document.getElementById('uploadButton');
+    if (uploadButton) {
+        uploadButton.addEventListener('click', function() {
+            const formData = new FormData(document.getElementById('uploadForm'));
+            
+            fetch('{{ url_for("books.upload_book") }}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.error || 'Ошибка при загрузке книги');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка при загрузке книги');
+            });
+        });
+    }
+
+    // Удаление книги
+    document.querySelectorAll('.delete-book-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            if (!confirm('Вы уверены, что хотите удалить эту книгу?')) return;
+            const bookId = this.getAttribute('data-book-id');
+            fetch(`/books/delete/${bookId}`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.error || 'Ошибка при удалении книги');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка при удалении книги');
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
