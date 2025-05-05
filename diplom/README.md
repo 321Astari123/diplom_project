@@ -91,13 +91,9 @@ online-library/
 ## Тестовые аккаунты
 
 - Администратор:
-  - Email: admin@example.com
+  - Email: admin@library.com
   - Пароль: admin123
 
 - Пользователь:
-  - Email: user@example.com
-  - Пароль: admin123
-
-## Лицензия
-
-MIT 
+  - Email: user123@example.com
+  - Пароль: user123
