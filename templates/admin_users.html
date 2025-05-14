@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Пользователи{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Управление пользователями</h2>
+    <table class="table table-bordered mt-4">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Имя пользователя</th>
+                <th>Email</th>
+                <th>Роль</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>{% if user.is_admin %}<span class="badge bg-success">Админ</span>{% else %}Пользователь{% endif %}</td>
+                <td>
+                    <button class="btn btn-warning btn-sm reset-password-btn" data-user-id="{{ user.id }}">Сбросить пароль</button>
+                    <button class="btn btn-danger btn-sm delete-user-btn ms-2" data-user-id="{{ user.id }}">Удалить</button>
+                    {% if not user.is_admin and user.id != current_user.id %}
+                    <button class="btn btn-success btn-sm make-admin-btn ms-2" data-user-id="{{ user.id }}">Сделать админом</button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="modal fade" id="passwordModal" tabindex="-1" aria-labelledby="passwordModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="passwordModalLabel">Новый пароль</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" class="form-control" id="new-password" readonly>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно подтверждения удаления пользователя -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteUserModalLabel">Подтвердите удаление</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+      <div class="modal-body">
+        Вы уверены, что хотите удалить пользователя <span id="delete-username"></span>?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-danger" id="confirm-delete-user">Удалить</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+document.querySelectorAll('.reset-password-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        if (!confirm('Сбросить пароль для этого пользователя?')) return;
+        const userId = this.getAttribute('data-user-id');
+        fetch(`/admin/reset_password/${userId}`, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('new-password').value = data.new_password;
+                var passwordModal = new bootstrap.Modal(document.getElementById('passwordModal'));
+                passwordModal.show();
+            } else {
+                alert(data.error || 'Ошибка сброса пароля');
+            }
+        })
+        .catch(() => {
+            alert('Ошибка сброса пароля');
+        });
+    });
+});
+
+let userIdToDelete = null;
+document.querySelectorAll('.delete-user-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        userIdToDelete = this.getAttribute('data-user-id');
+        const username = this.closest('tr').querySelector('td:nth-child(2)').textContent;
+        document.getElementById('delete-username').textContent = username;
+        var deleteUserModal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
+        deleteUserModal.show();
+    });
+});
+document.getElementById('confirm-delete-user').addEventListener('click', function() {
+    if (!userIdToDelete) return;
+    fetch(`/admin/delete_user/${userIdToDelete}`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Ошибка удаления пользователя');
+        }
+    })
+    .catch(() => {
+        alert('Ошибка удаления пользователя');
+    });
+});
+
+document.querySelectorAll('.make-admin-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        if (!confirm('Назначить этого пользователя администратором?')) return;
+        const userId = this.getAttribute('data-user-id');
+        fetch(`/admin/make_admin/${userId}`, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Ошибка назначения администратора');
+            }
+        })
+        .catch(() => {
+            alert('Ошибка назначения администратора');
+        });
+    });
+});
+</script>
+{% endblock %} 

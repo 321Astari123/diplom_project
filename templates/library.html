@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}Библиотека{% endblock %}
+
+{% block extra_css %}
+<style>
+    .book-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .book-cover {
+        height: 300px;
+        object-fit: cover;
+        background-color: #f8f9fa;
+    }
+    
+    .book-cover-placeholder {
+        height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f8f9fa;
+    }
+    
+    .book-card-body {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .book-card-footer {
+        margin-top: auto;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .genre-filter-form {
+        max-width: 300px;
+        margin-bottom: 1.5rem;
+    }
+    
+    input.bulk-checkbox {
+        accent-color: #dc3545;
+        width: 1.3em;
+        height: 1.3em;
+        border: 2px solid #dc3545;
+        box-shadow: 0 0 2px #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-4">Библиотека</h1>
+        {% if current_user.is_authenticated and current_user.is_admin %}
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+            <i class="fas fa-upload me-2"></i>Загрузить книгу
+        </button>
+        {% endif %}
+    </div>
+    
+    <!-- Фильтр по жанрам через select -->
+    <form method="get" class="genre-filter-form">
+        <label for="genreSelect" class="form-label">Фильтр по жанру:</label>
+        <select id="genreSelect" name="genre" class="form-select" onchange="this.form.submit()">
+            <option value="" {% if not current_genre %}selected{% endif %}>Все жанры</option>
+            {% for genre in genres %}
+            <option value="{{ genre }}" {% if current_genre == genre %}selected{% endif %}>
+                {{ genre_translations.get(genre, genre) }}
+            </option>
+            {% endfor %}
+        </select>
+    </form>
+    
+    <form id="bulkDeleteForm" method="post">
+    {% if current_user.is_authenticated and current_user.is_admin %}
+        <button type="button" class="btn btn-danger mb-3" id="bulkDeleteBtn" disabled>
+            <i class="fas fa-trash-alt me-2"></i>Удалить выбранные
+        </button>
+    {% endif %}
+    {% if books %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
+        {% for book in books %}
+        <div class="col">
+            <div class="card book-card position-relative">
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                <div style="position:absolute;top:10px;left:10px;z-index:20;background:#fff;padding:2px 6px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                    <input type="checkbox" class="form-check-input bulk-checkbox" value="{{ book.id }}">
+                </div>
+                {% endif %}
+                {% if book.cover_path and (book.cover_path|length > 0) %}
+                <img src="{{ url_for('static', filename='uploads/covers/' + book.cover_path) }}" 
+                     class="card-img-top book-cover" alt="{{ book.title }}"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="book-cover-placeholder" style="display:none;">
+                    <i class="fas fa-book fa-3x text-muted"></i>
+                </div>
+                {% else %}
+                <div class="book-cover-placeholder">
+                    <i class="fas fa-book fa-3x text-muted"></i>
+                </div>
+                {% endif %}
+                <div class="card-body book-card-body">
+                    <h5 class="card-title">{{ book.title }}</h5>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            <i class="fas fa-user me-1"></i>{{ book.author }}
+                        </small>
+                    </p>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            <i class="fas fa-tag me-1"></i>
+                            {% if book.genres %}
+                                {% for genre in book.genres %}
+                                    <a href="{{ url_for('books.library', genre=genre) }}" 
+                                       class="text-decoration-none me-2">
+                                        {{ genre_translations.get(genre, genre) }}
+                                    </a>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">Без жанра</span>
+                            {% endif %}
+                        </small>
+                    </p>
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" 
+                             style="width: {{ book.progress }}%">
+                            {{ book.progress }}%
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer book-card-footer d-flex flex-column gap-2">
+                    <a href="{{ url_for('books.book_details', book_id=book.id) }}" class="btn btn-outline-primary w-100 mb-1">
+                        <i class="fas fa-info-circle me-2"></i>Подробнее
+                    </a>
+                    <a href="{{ url_for('books.read_book', book_id=book.id) }}" class="btn btn-success w-100 mb-1">
+                        <i class="fas fa-book-open me-2"></i>Читать
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-book fa-5x text-muted mb-4"></i>
+        <h3>Библиотека пуста</h3>
+        <p class="text-muted">Здесь пока нет книг</p>
+    </div>
+    {% endif %}
+    </form>
+</div>
+
+<!-- Модальное окно загрузки -->
+{% if current_user.is_authenticated and current_user.is_admin %}
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Загрузка книги</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="bookFiles" class="form-label">Выберите файлы (FB2 или EPUB)</label>
+                        <input type="file" class="form-control" id="bookFiles" name="files[]" 
+                               accept=".fb2,.epub" multiple required>
+                    </div>
+                    <div class="progress mb-3" style="display: none;">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div id="uploadStatus" class="mb-3"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="uploadButton">
+                    <i class="fas fa-upload me-2"></i>Загрузить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadButton = document.getElementById('uploadButton');
+    const progressBar = document.querySelector('.progress');
+    const progressBarInner = document.querySelector('.progress-bar');
+    const uploadStatus = document.getElementById('uploadStatus');
+    
+    if (uploadButton) {
+        uploadButton.addEventListener('click', function() {
+            const files = document.getElementById('bookFiles').files;
+            if (files.length === 0) {
+                alert('Пожалуйста, выберите хотя бы один файл');
+                return;
+            }
+            
+            // Сброс состояния
+            progressBar.style.display = 'block';
+            progressBarInner.style.width = '0%';
+            uploadStatus.innerHTML = '';
+            
+            let uploadedCount = 0;
+            let errorCount = 0;
+            
+            // Загрузка каждого файла
+            Array.from(files).forEach((file, index) => {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                fetch('{{ url_for("books.upload_book") }}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    uploadedCount++;
+                    const progress = (uploadedCount / files.length) * 100;
+                    progressBarInner.style.width = `${progress}%`;
+                    
+                    if (data.success) {
+                        uploadStatus.innerHTML += `<div class="text-success">✓ ${file.name} успешно загружен</div>`;
+                    } else {
+                        errorCount++;
+                        uploadStatus.innerHTML += `<div class="text-danger">✗ ${file.name}: ${data.error || 'Ошибка при загрузке'}</div>`;
+                    }
+                    
+                    if (uploadedCount + errorCount === files.length) {
+                        if (errorCount === 0) {
+                            setTimeout(() => location.reload(), 1000);
+                        }
+                    }
+                })
+                .catch(error => {
+                    errorCount++;
+                    uploadStatus.innerHTML += `<div class="text-danger">✗ ${file.name}: Ошибка при загрузке</div>`;
+                    
+                    if (uploadedCount + errorCount === files.length) {
+                        if (errorCount === 0) {
+                            setTimeout(() => location.reload(), 1000);
+                        }
+                    }
+                });
+            });
+        });
+    }
+
+    // Массовое удаление
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const checkboxes = document.querySelectorAll('.bulk-checkbox');
+    if (bulkDeleteBtn && checkboxes.length > 0) {
+        document.querySelectorAll('.bulk-checkbox').forEach(cb => {
+            cb.addEventListener('change', function() {
+                const checked = document.querySelectorAll('.bulk-checkbox:checked').length;
+                bulkDeleteBtn.disabled = checked === 0;
+            });
+        });
+        bulkDeleteBtn.addEventListener('click', function() {
+            const checked = Array.from(document.querySelectorAll('.bulk-checkbox:checked')).map(cb => cb.value);
+            if (checked.length === 0) return;
+            if (!confirm('Удалить выбранные книги?')) return;
+            fetch('/books/delete_bulk', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ids: checked})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) location.reload();
+                else alert(data.error || 'Ошибка при удалении');
+            })
+            .catch(() => alert('Ошибка при удалении'));
+        });
+    }
+});
+</script>
+{% endblock %}

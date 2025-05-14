@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Онлайн библиотека{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f5f5f5;
+            --text-color: #333;
+            --border-color: #ddd;
+            --bg-color: #ffffff;
+            --card-bg: #ffffff;
+            --alert-bg: #ffffff;
+        }
+        
+        [data-theme="dark"] {
+            --primary-color: #2c3e50;
+            --secondary-color: #1a1a1a;
+            --text-color: #ffffff;
+            --border-color: #444;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --alert-bg: #1e1e1e;
+        }
+        
+        [data-theme="sepia"] {
+            --primary-color: #a67c52;
+            --secondary-color: #f4ecd8;
+            --text-color: #5b4636;
+            --border-color: #e0cfa9;
+            --bg-color: #f4ecd8;
+            --card-bg: #f9f6f1;
+            --alert-bg: #f9f6f1;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+        
+        [data-theme="dark"] h1,
+        [data-theme="dark"] h2,
+        [data-theme="dark"] h3,
+        [data-theme="dark"] h4,
+        [data-theme="dark"] h5,
+        [data-theme="dark"] h6,
+        [data-theme="dark"] p,
+        [data-theme="dark"] span,
+        [data-theme="dark"] div,
+        [data-theme="dark"] .text-muted,
+        [data-theme="dark"] .card-text,
+        [data-theme="dark"] .card-title,
+        [data-theme="dark"] .card-subtitle {
+            color: #ffffff !important;
+        }
+        
+        [data-theme="dark"] .text-muted {
+            color: #b0b0b0 !important;
+        }
+        
+        .navbar {
+            background: linear-gradient(90deg, #f4ecd8 0%, #a67c52 100%);
+            min-height: 70px;
+            box-shadow: 0 4px 16px 0 rgba(166,124,82,0.10), 0 1.5px 0 #e0cfa9;
+        }
+        
+        [data-theme="dark"] .navbar {
+            background: linear-gradient(90deg, #2c3e50 0%, #a67c52 100%);
+        }
+        
+        [data-theme="sepia"] .navbar {
+            background: linear-gradient(90deg, #f4ecd8 0%, #a67c52 100%);
+        }
+        
+        .navbar-brand.bookly-logo {
+            background: rgba(255,255,255,0.85);
+            border-radius: 2rem;
+            box-shadow: 0 2px 8px 0 rgba(166,124,82,0.10);
+            padding: 0.25rem 1.2rem 0.25rem 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            transition: box-shadow 0.2s;
+        }
+        
+        [data-theme="dark"] .navbar-brand.bookly-logo {
+            background: rgba(44,62,80,0.85);
+        }
+        
+        [data-theme="sepia"] .navbar-brand.bookly-logo {
+            background: rgba(244,236,216,0.85);
+        }
+        
+        .navbar-brand.bookly-logo:hover {
+            box-shadow: 0 4px 16px 0 rgba(166,124,82,0.18);
+        }
+        
+        .navbar-nav .nav-link {
+            color: var(--text-color) !important;
+            font-weight: 500;
+            font-size: 1.08rem;
+            border-radius: 0.5rem;
+            transition: background 0.2s, color 0.2s;
+            padding: 0.5rem 1rem;
+        }
+        
+        .navbar-nav .nav-link:hover, .navbar-nav .nav-link.active {
+            background: rgba(166,124,82,0.12);
+            color: #a67c52 !important;
+        }
+        
+        .theme-switcher .btn {
+            border-radius: 1.5rem;
+            font-size: 1.2rem;
+        }
+        
+        .navbar-brand, .nav-link {
+            color: white !important;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #357abd;
+            border-color: #357abd;
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            background-color: var(--card-bg);
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .alert {
+            border-radius: 0;
+            border: none;
+            background-color: var(--alert-bg);
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .alert-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .theme-switch {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .theme-switch-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* Для плавности */
+        .navbar, .navbar-brand.bookly-logo, .navbar-nav .nav-link {
+            transition: background 0.3s, color 0.3s, box-shadow 0.3s;
+        }
+        
+        .navbar-brand.bookly-logo .fw-bold {
+            color: var(--text-color) !important;
+            transition: color 0.3s;
+        }
+        
+        [data-theme="dark"] .alert-success {
+            background-color: #23482a;
+            color: #d4edda;
+        }
+        [data-theme="dark"] .alert-danger {
+            background-color: #4a2323;
+            color: #f8d7da;
+        }
+        [data-theme="dark"] .alert-info {
+            background-color: #1b3a4b;
+            color: #d1ecf1;
+        }
+        [data-theme="dark"] .alert-warning {
+            background-color: #4a4323;
+            color: #fff3cd;
+        }
+        [data-theme="sepia"] .alert-success {
+            background-color: #e7e2c7;
+            color: #5b4636;
+        }
+        [data-theme="sepia"] .alert-danger {
+            background-color: #f3e0d9;
+            color: #a67c52;
+        }
+        [data-theme="sepia"] .alert-info {
+            background-color: #e6e2d1;
+            color: #5b4636;
+        }
+        [data-theme="sepia"] .alert-warning {
+            background-color: #f6f1d1;
+            color: #a67c52;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Навигационная панель -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand bookly-logo" href="{{ url_for('books.library') }}">
+                <span style="display:inline-block; width:48px; height:48px;">
+                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Открытая книга -->
+                    <path d="M8 38 Q16 32 24 38 Q32 32 40 38" fill="#f9f6f1" stroke="#a67c52" stroke-width="2"/>
+                    <rect x="8" y="38" width="32" height="4" rx="2" fill="#e0cfa9" stroke="#a67c52" stroke-width="1.2"/>
+                    <line x1="24" y1="38" x2="24" y2="42" stroke="#a67c52" stroke-width="1.2"/>
+                    <!-- Сова -->
+                    <ellipse cx="24" cy="25" rx="10" ry="12" fill="white" stroke="#5b4636" stroke-width="2"/>
+                    <!-- Крылья -->
+                    <path d="M14 32 Q12 28 18 28" stroke="#a67c52" stroke-width="1.5" fill="none"/>
+                    <path d="M34 32 Q36 28 30 28" stroke="#a67c52" stroke-width="1.5" fill="none"/>
+                    <!-- Глаза -->
+                    <circle cx="19" cy="25" r="3" fill="white" stroke="#5b4636" stroke-width="1.5"/>
+                    <circle cx="29" cy="25" r="3" fill="white" stroke="#5b4636" stroke-width="1.5"/>
+                    <!-- Зрачки -->
+                    <circle cx="19" cy="25" r="1.2" fill="#5b4636"/>
+                    <circle cx="29" cy="25" r="1.2" fill="#5b4636"/>
+                    <!-- Очки -->
+                    <ellipse cx="19" cy="25" rx="4" ry="4" fill="none" stroke="#a67c52" stroke-width="1.2"/>
+                    <ellipse cx="29" cy="25" rx="4" ry="4" fill="none" stroke="#a67c52" stroke-width="1.2"/>
+                    <rect x="23" y="24.5" width="2" height="1" fill="#a67c52"/>
+                    <!-- Клюв -->
+                    <polygon points="24,28 22.8,29.5 25.2,29.5" fill="#a67c52"/>
+                  </svg>
+                </span>
+                <span class="fw-bold" style="font-size:1.5rem; letter-spacing:1px;">Bookly</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('books.library') }}">Библиотека</a>
+                    </li>
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('profile.profile') }}">Профиль</a>
+                        </li>
+                        {% if current_user.is_admin %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin.admin_panel') }}">
+                                    <i class="fas fa-user-shield me-1"></i>Админ
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('books.upload_book') }}">
+                                    <i class="fas fa-upload me-1"></i>Загрузить книгу
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+                <div class="d-flex align-items-center">
+                    <!-- Переключатель тем -->
+                    <div class="theme-switcher me-3">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" 
+                                data-bs-toggle="dropdown" aria-expanded="false" id="themeDropdownBtn">
+                            <i class="fas fa-palette" id="themeDropdownIcon"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <button class="dropdown-item" onclick="setTheme('light')">
+                                    <i class="fas fa-sun me-2"></i>Светлая
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item" onclick="setTheme('dark')">
+                                    <i class="fas fa-moon me-2"></i>Тёмная
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item" onclick="setTheme('sepia')">
+                                    <i class="fas fa-book me-2"></i>Сепия
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+            {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light">Выйти</a>
+            {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light">Войти</a>
+            {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Сообщения -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Основной контент -->
+    <main class="container my-4">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script>
+        function setTheme(theme) {
+            const body = document.body;
+            const icon = document.getElementById('themeDropdownIcon');
+            if (theme === 'dark') {
+                body.setAttribute('data-theme', 'dark');
+                icon.className = 'fas fa-moon';
+            } else if (theme === 'sepia') {
+                body.setAttribute('data-theme', 'sepia');
+                icon.className = 'fas fa-book';
+            } else {
+                body.removeAttribute('data-theme');
+                icon.className = 'fas fa-sun';
+            }
+            localStorage.setItem('theme', theme);
+            if (window.syncReaderTheme) {
+                window.syncReaderTheme();
+            }
+        }
+
+        // Восстанавливаем тему при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            setTheme(savedTheme);
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

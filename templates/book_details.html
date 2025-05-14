@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}{{ book.title }} — подробности{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Левая колонка с обложкой и основной информацией -->
+        <div class="col-md-4">
+            <div class="card">
+                <img src="{{ url_for('static', filename=book.cover_path) if book.cover_path else url_for('static', filename='covers/default.jpg') }}" 
+                     class="card-img-top" alt="{{ book.title }}">
+                <div class="card-body">
+                    <h5 class="card-title">{{ book.title }}</h5>
+                    <p class="card-text">
+                        <strong>Автор:</strong> {{ book.author }}<br>
+                        <strong>Рейтинг:</strong> {{ "%.1f"|format(book.average_rating) if book.average_rating else "Нет оценок" }}<br>
+                        <strong>Оценок:</strong> {{ book.total_ratings if book.total_ratings else 0 }}<br>
+                        <strong>Жанры:</strong><br>
+                        {% for genre in book.genres %}
+                            <span class="badge bg-primary me-1">{{ genre_translations.get(genre, genre) }}</span>
+                        {% endfor %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Правая колонка с описанием и дополнительной информацией -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">Описание</h4>
+                    <p class="card-text">{{ book.description }}</p>
+                    
+                    <div class="mt-4">
+                        <h5>Дополнительная информация</h5>
+                        <ul class="list-unstyled">
+                            <li><strong>Год публикации:</strong> {{ book.publication_year }}</li>
+                            <li><strong>ISBN:</strong> {{ book.isbn }}</li>
+                            <li><strong>Количество страниц:</strong> {{ book.pages }}</li>
+                            <li><strong>Язык:</strong> {{ book.language }}</li>
+                        </ul>
+                    </div>
+
+                    <div class="mt-4">
+                        <h5>Статистика</h5>
+                        <ul class="list-unstyled">
+                            <li><strong>Просмотров:</strong> {{ book.views }}</li>
+                            <li><strong>Добавлено в избранное:</strong> {{ book.favorites }}</li>
+                            <li><strong>Комментариев:</strong> {{ book.comments }}</li>
+                        </ul>
+                    </div>
+
+                    <div class="mt-4">
+                        <button id="favoriteBtn" class="btn btn-outline-primary" onclick="toggleFavorite()">
+                            <i class="fas fa-heart"></i> <span id="favoriteText">В избранное</span>
+                        </button>
+                        <div id="favoriteMsg" class="mt-2"></div>
+                    </div>
+
+                    {% if current_user.is_authenticated %}
+                    <div class="mt-4">
+                        <h5>Ваш прогресс</h5>
+                        <div class="progress">
+                            <div class="progress-bar" role="progressbar" 
+                                 style="width: {{ book.progress }}%;" 
+                                 aria-valuenow="{{ book.progress }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                {{ book.progress }}%
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-4">
+                        <a href="{{ url_for('books.read_book', book_id=book.id) }}" class="btn btn-primary">Читать</a>
+                        {% if current_user.is_authenticated %}
+                            <button class="btn btn-outline-primary" onclick="updateProgress({{ book.id }})">
+                                Обновить прогресс
+                            </button>
+                        {% endif %}
+                    </div>
+
+                    {% if current_user.is_authenticated %}
+                        {% if user_rating %}
+                        <div class="mt-4">
+                            <h5>Ваша оценка</h5>
+                            <div>
+                                <strong>Оценка:</strong> {{ user_rating }} ★<br>
+                                {% if user_review %}
+                                    <strong>Отзыв:</strong> {{ user_review }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="mt-4">
+                            <h5>Оценить книгу</h5>
+                            <form id="rateForm" method="post" action="{{ url_for('profile.rate_book', book_id=book.id) }}">
+                                <div class="mb-2">
+                                    <label for="rating">Ваша оценка:</label>
+                                    <select name="rating" id="rating" class="form-select" required>
+                                        <option value="">Выберите...</option>
+                                        {% for i in range(5, 0, -1) %}
+                                            <option value="{{ i }}">{{ i }} ★</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label for="review">Отзыв (необязательно):</label>
+                                    <textarea name="review" id="review" class="form-control"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-success">Оценить</button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if current_user.is_authenticated %}
+<script>
+function updateProgress(bookId) {
+    const progress = prompt('Введите прогресс чтения (0-100):');
+    if (progress === null) return;
+    
+    const progressValue = parseFloat(progress);
+    if (isNaN(progressValue) || progressValue < 0 || progressValue > 100) {
+        alert('Пожалуйста, введите число от 0 до 100');
+        return;
+    }
+    
+    fetch(`/books/update_progress/${bookId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `progress=${progressValue}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Ошибка при обновлении прогресса');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при обновлении прогресса');
+    });
+}
+
+// Проверяем, находится ли книга в избранном
+async function checkFavorite() {
+    try {
+        const response = await fetch(`/books/is_favorite/{{ book.id }}`);
+        const data = await response.json();
+        updateFavoriteButton(data.is_favorite);
+    } catch (error) {
+        console.error('Ошибка при проверке избранного:', error);
+    }
+}
+
+// Обновляем внешний вид кнопки
+function updateFavoriteButton(isFavorite) {
+    const btn = document.getElementById('favoriteBtn');
+    const text = document.getElementById('favoriteText');
+    if (isFavorite) {
+        btn.classList.remove('btn-outline-primary');
+        btn.classList.add('btn-primary');
+        text.textContent = 'В избранном';
+    } else {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline-primary');
+        text.textContent = 'В избранное';
+    }
+}
+
+// Показываем всплывающее сообщение
+function showFavoriteMsg(msg, success = true) {
+    const msgDiv = document.getElementById('favoriteMsg');
+    msgDiv.textContent = msg;
+    msgDiv.className = 'mt-2 ' + (success ? 'text-success' : 'text-danger');
+    msgDiv.style.display = 'block';
+    setTimeout(() => { msgDiv.style.display = 'none'; }, 2500);
+}
+
+// Переключаем состояние избранного
+async function toggleFavorite() {
+    try {
+        const btn = document.getElementById('favoriteBtn');
+        const isFavorite = btn.classList.contains('btn-primary');
+        const url = isFavorite ? 
+            `/books/unfavorite/{{ book.id }}` : 
+            `/books/favorite/{{ book.id }}`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            updateFavoriteButton(!isFavorite);
+            if (!isFavorite) {
+                showFavoriteMsg('Добавлено в избранное!');
+                setTimeout(() => { window.location.href = '/profile'; }, 1200);
+            } else {
+                showFavoriteMsg('Удалено из избранного!', true);
+            }
+        } else {
+            showFavoriteMsg('Ошибка: ' + (data.error || 'Не удалось обновить избранное'), false);
+            console.error('Ошибка при обновлении избранного:', data.error);
+        }
+    } catch (error) {
+        showFavoriteMsg('Ошибка: ' + error, false);
+        console.error('Ошибка при обновлении избранного:', error);
+    }
+}
+
+// Проверяем состояние избранного при загрузке страницы
+document.addEventListener('DOMContentLoaded', checkFavorite);
+
+// Обработка формы оценки через fetch
+const rateForm = document.getElementById('rateForm');
+if (rateForm) {
+    rateForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const rating = document.getElementById('rating').value;
+        const review = document.getElementById('review').value;
+        if (!rating) {
+            alert('Пожалуйста, выберите оценку');
+            return;
+        }
+        fetch(rateForm.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                'rating': rating,
+                'review': review
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Спасибо за вашу оценку!');
+                location.reload();
+            } else {
+                alert('Ошибка при сохранении оценки: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка при сохранении оценки');
+        });
+    });
+}
+</script>
+{% endif %}
+{% endblock %} 

@@ -1,0 +1,1029 @@
+{% extends "base.html" %}
+
+{% block title %}{{ book.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --reader-bg: #ffffff;
+        --reader-text: #000000;
+        --reader-font: 'Arial', sans-serif;
+    }
+    
+    [data-theme="dark"] {
+        --reader-bg: #121212;
+        --reader-text: #ffffff;
+    }
+    
+    .reader-controls {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(90deg, #f4ecd8 0%, #a67c52 100%);
+        min-height: 72px;
+        height: 72px;
+        box-shadow: 0 4px 16px 0 rgba(166,124,82,0.10), 0 1.5px 0 #e0cfa9;
+        border-bottom-left-radius: 1.2rem;
+        border-bottom-right-radius: 1.2rem;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+    }
+    
+    [data-theme="dark"] .reader-controls {
+        background: linear-gradient(90deg, #2c3e50 0%, #a67c52 100%);
+    }
+    
+    [data-theme="sepia"] .reader-controls {
+        background: linear-gradient(90deg, #f4ecd8 0%, #a67c52 100%);
+    }
+    
+    .reader-nav {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .reader-settings {
+        position: relative;
+    }
+    
+    .settings-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        padding: 10px;
+        display: none;
+        min-width: 200px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        color: var(--text-color);
+    }
+    
+    .settings-dropdown.show {
+        display: block;
+    }
+    
+    .theme-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 5px;
+        cursor: pointer;
+    }
+    
+    .theme-option:hover {
+        background-color: var(--secondary-color);
+    }
+    
+    .theme-preview {
+        width: 20px;
+        height: 20px;
+        border-radius: 3px;
+    }
+    
+    .font-option {
+        padding: 5px;
+        cursor: pointer;
+    }
+    
+    .font-option:hover {
+        background-color: var(--secondary-color);
+    }
+    
+    .font-size-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background-color: var(--secondary-color);
+        padding: 5px 10px;
+        border-radius: 5px;
+    }
+    
+    .font-size-btn {
+        background: var(--primary-color);
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 5px 10px;
+        border-radius: 3px;
+        transition: background-color 0.2s;
+    }
+    
+    .font-size-btn:hover {
+        background-color: var(--primary-color);
+        opacity: 0.9;
+    }
+    
+    .font-size-value {
+        color: var(--text-color);
+        font-weight: bold;
+        min-width: 30px;
+        text-align: center;
+    }
+    
+    .page-nav {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .page-nav-btn {
+        background: none;
+        border: 1px solid white;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    
+    .page-nav-btn:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .back-to-library {
+        color: var(--text-color) !important;
+        background: rgba(255,255,255,0.85);
+        border: 1.5px solid #a67c52;
+        border-radius: 1.5rem;
+        font-weight: 500;
+        font-size: 1.08rem;
+        min-width: 150px;
+        white-space: nowrap;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px 0 rgba(166,124,82,0.10);
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        text-decoration: none;
+        padding: 0.35rem 1.4rem;
+        gap: 8px;
+    }
+    
+    .back-to-library:hover {
+        background: #a67c52;
+        color: #fff !important;
+        box-shadow: 0 4px 16px 0 rgba(166,124,82,0.18);
+        text-decoration: none;
+    }
+    
+    [data-theme="dark"] .back-to-library {
+        background: rgba(44,62,80,0.85);
+        color: #fff !important;
+        border-color: #a67c52;
+    }
+    
+    [data-theme="sepia"] .back-to-library {
+        background: rgba(244,236,216,0.85);
+        color: #5b4636 !important;
+        border-color: #a67c52;
+    }
+    
+    .progress-indicator {
+        color: white;
+        font-size: 14px;
+    }
+    
+    .search-container {
+        position: relative;
+        margin-right: 10px;
+    }
+    
+    .search-input-group {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .search-input {
+        padding: 5px 10px;
+        border: 1px solid white;
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        width: 200px;
+    }
+    
+    .search-input::placeholder {
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .search-options-btn {
+        background: none;
+        border: 1px solid white;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    
+    .search-options-btn:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .search-options {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        padding: 10px;
+        margin-top: 5px;
+        min-width: 200px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        z-index: 1001;
+    }
+    
+    .search-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 0;
+        color: var(--text-color);
+    }
+    
+    .search-option input[type="checkbox"] {
+        margin: 0;
+    }
+    
+    .search-option label {
+        cursor: pointer;
+        user-select: none;
+    }
+    
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        max-height: 200px;
+        overflow-y: auto;
+        display: none;
+        z-index: 1001;
+        color: var(--text-color);
+    }
+    
+    .search-results.show {
+        display: block;
+    }
+    
+    .search-result {
+        padding: 5px 10px;
+        cursor: pointer;
+    }
+    
+    .search-result:hover {
+        background-color: var(--secondary-color);
+    }
+    
+    .highlight {
+        background-color: yellow;
+        color: black;
+    }
+    
+    .search-nav {
+        display: flex;
+        gap: 5px;
+        margin-top: 5px;
+    }
+    
+    .search-nav-btn {
+        background: none;
+        border: 1px solid white;
+        color: white;
+        padding: 2px 5px;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+    
+    .search-nav-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .page-content a {
+        color: inherit !important;
+        text-decoration: none !important;
+        pointer-events: none;
+        cursor: default;
+    }
+    
+    .reader-settings > .font-size-btn {
+        background: #fff;
+        border: 2px solid #a67c52;
+        color: #a67c52;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        box-shadow: 0 2px 8px 0 rgba(166,124,82,0.10);
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        margin-right: 0.5rem;
+        outline: none;
+    }
+    .reader-settings > .font-size-btn:hover, .reader-settings > .font-size-btn:focus {
+        background: #a67c52;
+        color: #fff;
+        box-shadow: 0 4px 16px 0 rgba(166,124,82,0.18);
+    }
+    [data-theme="dark"] .reader-settings > .font-size-btn {
+        background: #23272b;
+        color: #fff;
+        border-color: #a67c52;
+    }
+    [data-theme="dark"] .reader-settings > .font-size-btn:hover, [data-theme="dark"] .reader-settings > .font-size-btn:focus {
+        background: #a67c52;
+        color: #fff;
+    }
+    .settings-dropdown {
+        background: var(--card-bg);
+        border: 1.5px solid #e0cfa9;
+        border-radius: 1.2rem;
+        box-shadow: 0 8px 32px 0 rgba(166,124,82,0.18);
+        padding: 18px 20px 14px 20px;
+        min-width: 230px;
+        margin-top: 10px;
+        color: var(--text-color);
+        font-size: 1.05rem;
+    }
+    .settings-dropdown strong {
+        font-size: 1.08rem;
+        color: #a67c52;
+        display: block;
+        margin-bottom: 6px;
+    }
+    .settings-dropdown .theme-option,
+    .settings-dropdown .font-option {
+        border-radius: 0.5rem;
+        padding: 6px 8px;
+        margin-bottom: 2px;
+        transition: background 0.18s;
+    }
+    .settings-dropdown .theme-option:hover,
+    .settings-dropdown .font-option:hover {
+        background: var(--secondary-color);
+    }
+    .settings-dropdown .theme-option:last-child,
+    .settings-dropdown .font-option:last-child {
+        margin-bottom: 8px;
+    }
+    .settings-dropdown .font-size-controls {
+        background: none;
+        padding: 0;
+        border-radius: 0;
+        gap: 0.5rem;
+        margin-top: 10px;
+        justify-content: center;
+    }
+    .settings-dropdown .font-size-btn {
+        background: #f4ecd8;
+        color: #a67c52;
+        border: 1.5px solid #a67c52;
+        border-radius: 0.7rem;
+        font-size: 1.1rem;
+        font-weight: bold;
+        padding: 4px 14px;
+        transition: background 0.18s, color 0.18s;
+    }
+    .settings-dropdown .font-size-btn:hover {
+        background: #a67c52;
+        color: #fff;
+    }
+    .settings-dropdown .font-size-value {
+        font-size: 1.1rem;
+        color: #a67c52;
+        font-weight: bold;
+        min-width: 32px;
+        text-align: center;
+    }
+    .settings-dropdown hr {
+        border: none;
+        border-top: 1px solid #e0cfa9;
+        margin: 10px 0 12px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="reader-controls">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div class="reader-nav">
+            <a href="{{ url_for('books.library') }}" class="back-to-library">
+                <i class="fas fa-arrow-left"></i>
+                <span>В библиотеку</span>
+            </a>
+            <div class="book-info ms-3">
+                <h5 class="mb-0 text-white">{{ book.title }}</h5>
+                <small class="text-white-50">
+                    {{ book.author }}
+                    {% if book.genres %}
+                        | {% for genre in book.genres %}
+                            <a href="{{ url_for('books.library', genre=genre) }}" 
+                               class="text-white-50 text-decoration-none">
+                                {{ genre_translations.get(genre, genre) }}
+                            </a>{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </small>
+            </div>
+            <div class="search-container">
+                <div class="search-input-group">
+                    <input type="text" class="search-input" placeholder="Поиск по тексту..." id="searchInput">
+                    <button class="search-options-btn" onclick="toggleSearchOptions()">
+                        <i class="fas fa-sliders-h"></i>
+                    </button>
+                </div>
+                <div class="search-options" id="searchOptions" style="display: none;">
+                    <div class="search-option">
+                        <input type="checkbox" id="caseSensitive" onchange="updateSearchOptions()">
+                        <label for="caseSensitive">Учитывать регистр</label>
+                    </div>
+                    <div class="search-option">
+                        <input type="checkbox" id="wholeWord" onchange="updateSearchOptions()">
+                        <label for="wholeWord">Целое слово</label>
+                    </div>
+                    <div class="search-option">
+                        <input type="checkbox" id="useRegex" onchange="updateSearchOptions()">
+                        <label for="useRegex">Регулярное выражение</label>
+                    </div>
+                </div>
+                <div class="search-results" id="searchResults"></div>
+                <div class="search-nav" id="searchNav" style="display: none;">
+                    <button class="search-nav-btn" onclick="prevMatch()" id="prevMatchBtn">
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                    <span id="matchCount" style="color: white;">0/0</span>
+                    <button class="search-nav-btn" onclick="nextMatch()" id="nextMatchBtn">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="reader-settings">
+                <button class="font-size-btn" onclick="toggleSettings()" aria-label="Настройки">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <div class="settings-dropdown" id="settingsDropdown">
+                    <div class="mb-2">
+                        <strong>Тема:</strong>
+                        <div class="theme-option" onclick="setTheme('light')">
+                            <div class="theme-preview" style="background: #ffffff; border: 1px solid #000;"></div>
+                            <span>Светлая</span>
+                        </div>
+                        <div class="theme-option" onclick="setTheme('dark')">
+                            <div class="theme-preview" style="background: #1a1a1a; border: 1px solid #fff;"></div>
+                            <span>Тёмная</span>
+                        </div>
+                        <div class="theme-option" onclick="setTheme('sepia')">
+                            <div class="theme-preview" style="background: #f4ecd8; border: 1px solid #000;"></div>
+                            <span>Сепия</span>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Шрифт:</strong>
+                        <div class="font-option" onclick="setFont('Arial')">Arial</div>
+                        <div class="font-option" onclick="setFont('Times New Roman')">Times New Roman</div>
+                        <div class="font-option" onclick="setFont('Georgia')">Georgia</div>
+                    </div>
+                    <div class="font-size-controls">
+                        <button class="font-size-btn" onclick="changeFontSize(-1)">
+                            <i class="fas fa-font"></i> -
+                        </button>
+                        <span class="font-size-value" id="fontSizeValue">18</span>
+                        <button class="font-size-btn" onclick="changeFontSize(1)">
+                            <i class="fas fa-font"></i> +
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <div class="progress-indicator">
+                Страница <span id="currentPage">1</span> из <span id="totalPages">{{ total_pages }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="page-content" id="pageContent" style="font-family: var(--reader-font, Arial), Arial, sans-serif;">
+        {{ content|safe }}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const userId = {{ current_user.id }};
+const bookId = {{ book.id }};
+let currentFontSize = 18;
+let totalPages = {{ total_pages }};
+let currentPage = {{ current_page }};
+let pageHeight = 0;
+let isScrollingByButton = false;
+let scrollTimeout = null;
+
+// Обновляем отображение общего количества страниц
+document.getElementById('totalPages').textContent = totalPages;
+document.getElementById('currentPage').textContent = currentPage;
+document.getElementById('fontSizeValue').textContent = currentFontSize;
+
+// Функция для расчета высоты страницы
+function calculatePageHeight() {
+    const content = document.getElementById('pageContent');
+    const navHeight = document.querySelector('.reader-controls').offsetHeight;
+    const windowHeight = window.innerHeight;
+    const contentHeight = content.scrollHeight;
+    
+    // Вычисляем реальную высоту страницы с учетом навигации
+    pageHeight = windowHeight - navHeight;
+    
+    // Пересчитываем общее количество страниц
+    totalPages = Math.ceil(contentHeight / pageHeight);
+    document.getElementById('totalPages').textContent = totalPages;
+    
+    // Обновляем текущую страницу, если она вышла за пределы
+    if (currentPage > totalPages) {
+        currentPage = totalPages;
+        document.getElementById('currentPage').textContent = currentPage;
+    }
+}
+
+function scrollToPage() {
+    if (!pageHeight) {
+        calculatePageHeight();
+    }
+    const navHeight = document.querySelector('.reader-controls').offsetHeight;
+    const scrollPosition = (currentPage - 1) * pageHeight;
+    isScrollingByButton = true;
+    window.scrollTo({
+        top: scrollPosition,
+        behavior: 'smooth'
+    });
+    document.getElementById('currentPage').textContent = currentPage;
+    saveProgress((currentPage / totalPages) * 100);
+    setTimeout(() => { isScrollingByButton = false; }, 500);
+}
+
+// Обновляем обработчик изменения размера окна
+window.addEventListener('resize', function() {
+    calculatePageHeight();
+    scrollToPage();
+});
+
+// Обновляем обработчик прокрутки
+window.addEventListener('scroll', function() {
+    if (!pageHeight) {
+        calculatePageHeight();
+    }
+    if (isScrollingByButton) return;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(function() {
+        const navHeight = document.querySelector('.reader-controls').offsetHeight;
+        const scrollPosition = window.scrollY;
+        const newPage = Math.floor(scrollPosition / pageHeight) + 1;
+        if (newPage !== currentPage) {
+            currentPage = newPage;
+            document.getElementById('currentPage').textContent = currentPage;
+            saveProgress((currentPage / totalPages) * 100);
+        }
+    }, 100);
+});
+
+// Обновляем функцию изменения размера шрифта
+function changeFontSize(delta) {
+    currentFontSize = Math.max(12, Math.min(24, currentFontSize + delta));
+    document.getElementById('pageContent').style.fontSize = `${currentFontSize}px`;
+    document.getElementById('fontSizeValue').textContent = currentFontSize;
+    localStorage.setItem('fontSize', currentFontSize);
+    
+    // Пересчитываем высоту страницы после изменения шрифта
+    setTimeout(calculatePageHeight, 100);
+}
+
+// Настройки темы
+const themes = {
+    light: {
+        bg: '#ffffff',
+        text: '#000000'
+    },
+    dark: {
+        bg: '#1a1a1a',
+        text: '#ffffff'
+    },
+    sepia: {
+        bg: '#f4ecd8',
+        text: '#000000'
+    }
+};
+
+function toggleSettings() {
+    const dropdown = document.getElementById('settingsDropdown');
+    dropdown.classList.toggle('show');
+}
+
+function setTheme(theme) {
+    const root = document.documentElement;
+    const content = document.getElementById('pageContent');
+    const body = document.body;
+    
+    // Обновляем тему сайта
+    if (theme === 'dark') {
+        body.setAttribute('data-theme', 'dark');
+        content.style.backgroundColor = '#121212';
+        content.style.color = '#ffffff';
+    } else if (theme === 'sepia') {
+        body.removeAttribute('data-theme');
+        content.style.backgroundColor = '#f4ecd8';
+        content.style.color = '#000000';
+    } else {
+        body.removeAttribute('data-theme');
+        content.style.backgroundColor = '#ffffff';
+        content.style.color = '#000000';
+    }
+    
+    // Сохраняем настройки
+    root.style.setProperty('--reader-bg', themes[theme].bg);
+    root.style.setProperty('--reader-text', themes[theme].text);
+    localStorage.setItem('readerTheme', theme);
+    localStorage.setItem('theme', theme === 'dark' ? 'dark' : 'light');
+}
+
+function setFont(font) {
+    document.documentElement.style.setProperty('--reader-font', font);
+    localStorage.setItem('readerFont', font);
+}
+
+function prevPage() {
+    if (currentPage > 1) {
+        currentPage--;
+        scrollToPage();
+    }
+}
+
+function nextPage() {
+    if (currentPage < totalPages) {
+        currentPage++;
+        scrollToPage();
+    }
+}
+
+function saveProgress(progress) {
+    if (typeof progress !== 'number' || isNaN(progress)) {
+        console.error('Некорректное значение прогресса:', progress);
+        return;
+    }
+    
+    // Ограничиваем прогресс от 0 до 100
+    progress = Math.max(0, Math.min(100, progress));
+    
+    fetch('{{ url_for("books.update_progress", book_id=book.id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+        body: `progress=${progress}`
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (!data.success) {
+            console.error('Ошибка при сохранении прогресса:', data.error || 'Неизвестная ошибка');
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка при сохранении прогресса:', error);
+    });
+}
+
+// Функция для обработки изображений
+function processImages() {
+    const content = document.getElementById('pageContent');
+    const images = content.getElementsByTagName('img');
+    
+    for (let img of images) {
+        const src = img.getAttribute('src');
+        if (src) {
+            // Если путь относительный, добавляем базовый путь
+            if (!src.startsWith('http') && !src.startsWith('/')) {
+                img.src = '/static/uploads/books/' + src;
+            }
+            // Добавляем обработку ошибок загрузки изображений
+            img.onerror = function() {
+                this.style.display = 'none';
+                console.warn('Не удалось загрузить изображение:', this.src);
+            };
+        }
+    }
+}
+
+// Синхронизация темы сайта с темой читалки
+function syncTheme() {
+    const body = document.body;
+    const isDark = body.getAttribute('data-theme') === 'dark';
+    const content = document.getElementById('pageContent');
+    
+    if (isDark) {
+        content.style.backgroundColor = '#121212';
+        content.style.color = '#ffffff';
+    } else {
+        content.style.backgroundColor = '#ffffff';
+        content.style.color = '#000000';
+    }
+}
+
+// Делаем функцию доступной глобально для синхронизации
+window.syncReaderTheme = syncTheme;
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        // Проверяем наличие необходимых элементов
+        const pageContent = document.getElementById('pageContent');
+        const currentPageElement = document.getElementById('currentPage');
+        const totalPagesElement = document.getElementById('totalPages');
+        const fontSizeValueElement = document.getElementById('fontSizeValue');
+        
+        if (!pageContent || !currentPageElement || !totalPagesElement || !fontSizeValueElement) {
+            throw new Error('Не найдены необходимые элементы на странице');
+        }
+        
+        // Восстанавливаем настройки
+        const savedTheme = localStorage.getItem('readerTheme') || localStorage.getItem('theme') || 'light';
+        const savedFont = localStorage.getItem('readerFont') || 'Arial';
+        const savedFontSize = localStorage.getItem('fontSize');
+        
+        // Устанавливаем настройки
+        setTheme(savedTheme);
+        setFont(savedFont);
+        if (savedFontSize) {
+            currentFontSize = parseInt(savedFontSize);
+            if (!isNaN(currentFontSize)) {
+                pageContent.style.fontSize = `${currentFontSize}px`;
+                fontSizeValueElement.textContent = currentFontSize;
+            }
+        }
+        
+        // Обновляем отображение текущей страницы
+        currentPageElement.textContent = currentPage;
+        
+        // Вычисляем высоту страницы после загрузки контента
+        setTimeout(calculatePageHeight, 100);
+        
+        // Прокручиваем к нужной странице после вычисления высоты
+        setTimeout(scrollToPage, 200);
+        
+        // Обрабатываем изображения
+        processImages();
+        
+        // Синхронизируем тему
+        syncTheme();
+        
+        // Сохраняем прогресс при прокрутке
+        let scrollTimeout;
+        window.addEventListener('scroll', function() {
+            // Используем debounce для оптимизации частых вызовов
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(function() {
+                const scrollPosition = window.scrollY + window.innerHeight;
+                const documentHeight = document.documentElement.scrollHeight;
+                const progress = (scrollPosition / documentHeight) * 100;
+                
+                // Обновляем текущую страницу
+                currentPage = Math.floor(window.scrollY / window.innerHeight) + 1;
+                currentPageElement.textContent = currentPage;
+                
+                // Сохраняем прогресс и текущую страницу
+                saveProgress(progress);
+                localStorage.setItem('lastPage_' + bookId + '_user_' + userId, currentPage.toString());
+            }, 100); // Задержка 100мс
+        });
+        
+        // Закрываем выпадающее меню при клике вне него
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('settingsDropdown');
+            if (!event.target.closest('.reader-settings')) {
+                dropdown.classList.remove('show');
+            }
+        });
+    } catch (error) {
+        console.error('Ошибка при инициализации читалки:', error);
+        // Показываем сообщение об ошибке пользователю
+        const errorMessage = document.createElement('div');
+        errorMessage.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:red;color:white;padding:20px;border-radius:5px;z-index:9999;';
+        errorMessage.textContent = 'Произошла ошибка при загрузке читалки. Пожалуйста, обновите страницу.';
+        document.body.appendChild(errorMessage);
+    }
+});
+
+// Поиск по тексту
+let searchResults = [];
+let currentMatchIndex = -1;
+let searchOptions = {
+    caseSensitive: false,
+    wholeWord: false,
+    regex: false
+};
+
+function searchText() {
+    const searchTerm = document.getElementById('searchInput').value;
+    if (!searchTerm) {
+        clearSearch();
+        return;
+    }
+    // Ограничение длины поискового запроса
+    if (searchTerm.length > 100) {
+        alert('Слишком длинный поисковый запрос!');
+        return;
+    }
+    const content = document.getElementById('pageContent');
+    // Берём только видимый текст (текущую страницу)
+    const navHeight = document.querySelector('.reader-controls').offsetHeight;
+    const pageTop = window.scrollY;
+    const pageBottom = pageTop + window.innerHeight - navHeight;
+    let visibleText = '';
+    for (const node of content.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            visibleText += node.textContent;
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const rect = node.getBoundingClientRect();
+            const nodeTop = rect.top + window.scrollY;
+            const nodeBottom = rect.bottom + window.scrollY;
+            if (nodeBottom > pageTop && nodeTop < pageBottom) {
+                visibleText += node.innerText || node.textContent;
+            }
+        }
+    }
+    let regex;
+    try {
+        if (searchOptions.regex) {
+            regex = new RegExp(searchTerm, searchOptions.caseSensitive ? 'g' : 'gi');
+        } else {
+            const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const pattern = searchOptions.wholeWord ? `\\b${escapedTerm}\\b` : escapedTerm;
+            regex = new RegExp(pattern, searchOptions.caseSensitive ? 'g' : 'gi');
+        }
+    } catch (e) {
+        alert('Некорректное регулярное выражение!');
+        return;
+    }
+    // Ищем только по видимому тексту
+    const matches = [...visibleText.matchAll(regex)];
+    searchResults = matches.map(match => ({
+        index: match.index,
+        length: match[0].length,
+        text: match[0]
+    }));
+    highlightAllMatches();
+    updateSearchUI();
+}
+
+function highlightAllMatches() {
+    const content = document.getElementById('pageContent');
+    const text = content.textContent;
+    let html = text;
+    
+    // Подсвечиваем все совпадения
+    for (let i = searchResults.length - 1; i >= 0; i--) {
+        const match = searchResults[i];
+        const before = html.substring(0, match.index);
+        const matchText = html.substring(match.index, match.index + match.length);
+        const after = html.substring(match.index + match.length);
+        html = before + `<span class="search-match" data-index="${i}">${matchText}</span>` + after;
+    }
+    
+    content.innerHTML = html;
+    
+    // Добавляем обработчики для подсветки при наведении
+    const matches = content.getElementsByClassName('search-match');
+    for (let match of matches) {
+        match.addEventListener('mouseover', function() {
+            this.classList.add('search-match-hover');
+        });
+        match.addEventListener('mouseout', function() {
+            this.classList.remove('search-match-hover');
+        });
+    }
+}
+
+function updateSearchUI() {
+    const searchNav = document.getElementById('searchNav');
+    const matchCount = document.getElementById('matchCount');
+    const prevBtn = document.getElementById('prevMatchBtn');
+    const nextBtn = document.getElementById('nextMatchBtn');
+    
+    if (searchResults.length > 0) {
+        searchNav.style.display = 'flex';
+        matchCount.textContent = `${currentMatchIndex + 1}/${searchResults.length}`;
+        prevBtn.disabled = currentMatchIndex <= 0;
+        nextBtn.disabled = currentMatchIndex >= searchResults.length - 1;
+        
+        // Подсвечиваем текущее совпадение
+        const matches = document.getElementsByClassName('search-match');
+        for (let match of matches) {
+            match.classList.remove('search-match-current');
+        }
+        if (currentMatchIndex >= 0) {
+            matches[currentMatchIndex].classList.add('search-match-current');
+            matches[currentMatchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    } else {
+        searchNav.style.display = 'none';
+    }
+}
+
+function clearSearch() {
+    const content = document.getElementById('pageContent');
+    content.innerHTML = content.textContent;
+    searchResults = [];
+    currentMatchIndex = -1;
+    document.getElementById('searchNav').style.display = 'none';
+}
+
+function prevMatch() {
+    if (currentMatchIndex > 0) {
+        currentMatchIndex--;
+        updateSearchUI();
+    }
+}
+
+function nextMatch() {
+    if (currentMatchIndex < searchResults.length - 1) {
+        currentMatchIndex++;
+        updateSearchUI();
+    }
+}
+
+// Добавляем стили для подсветки
+const style = document.createElement('style');
+style.textContent = `
+    .search-match {
+        background-color: rgba(255, 255, 0, 0.3);
+        cursor: pointer;
+    }
+    .search-match-hover {
+        background-color: rgba(255, 255, 0, 0.5);
+    }
+    .search-match-current {
+        background-color: rgba(255, 255, 0, 0.7);
+    }
+`;
+document.head.appendChild(style);
+
+// Добавляем обработчики поиска
+document.getElementById('searchInput').addEventListener('input', searchText);
+
+// Добавляем горячие клавиши для поиска
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        document.getElementById('searchInput').focus();
+    } else if (e.key === 'F3' || (e.ctrlKey && e.key === 'g')) {
+        e.preventDefault();
+        if (searchResults.length > 0) {
+            nextMatch();
+        }
+    } else if (e.shiftKey && e.key === 'F3' || (e.ctrlKey && e.shiftKey && e.key === 'g')) {
+        e.preventDefault();
+        if (searchResults.length > 0) {
+            prevMatch();
+        }
+    }
+});
+
+function toggleSearchOptions() {
+    const options = document.getElementById('searchOptions');
+    options.style.display = options.style.display === 'none' ? 'block' : 'none';
+}
+
+function updateSearchOptions() {
+    searchOptions.caseSensitive = document.getElementById('caseSensitive').checked;
+    searchOptions.wholeWord = document.getElementById('wholeWord').checked;
+    searchOptions.regex = document.getElementById('useRegex').checked;
+    
+    // Перезапускаем поиск с новыми опциями
+    searchText();
+}
+
+// Закрываем опции поиска при клике вне них
+document.addEventListener('click', function(event) {
+    const searchContainer = document.querySelector('.search-container');
+    const searchOptions = document.getElementById('searchOptions');
+    if (!searchContainer.contains(event.target)) {
+        searchOptions.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

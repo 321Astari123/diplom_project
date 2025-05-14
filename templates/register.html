@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-body">
+                <h2 class="card-title text-center mb-4">Регистрация</h2>
+                <form method="POST" action="{{ url_for('auth.register') }}">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Имя пользователя</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Пароль</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="password" name="password" required>
+                            <button class="btn btn-outline-secondary" type="button" id="toggle-password" tabindex="-1" aria-label="Показать пароль">
+                                <i class="fas fa-eye" id="password-icon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-2"></i>Зарегистрироваться
+                        </button>
+                    </div>
+                </form>
+                <div class="text-center mt-3">
+                    <p class="mb-0">Уже есть аккаунт? <a href="{{ url_for('auth.login') }}">Войти</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.getElementById('toggle-password').addEventListener('click', function() {
+    const passwordField = document.getElementById('password');
+    const passwordIcon = document.getElementById('password-icon');
+    if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        passwordIcon.className = 'fas fa-eye-slash';
+    } else {
+        passwordField.type = 'password';
+        passwordIcon.className = 'fas fa-eye';
+    }
+});
+</script>
+{% endblock %}

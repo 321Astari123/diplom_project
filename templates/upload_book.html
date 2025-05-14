@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-upload me-2"></i>Загрузить новую книгу</h3>
+                </div>
+                <div class="card-body">
+                    {% if current_user.role != 'admin' %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Обратите внимание:</strong> Загруженные книги будут отправлены на модерацию 
+                        и появятся в библиотеке после одобрения администратором.
+                    </div>
+                    {% endif %}
+                    <form method="post" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Файл книги (FB2 или EPUB)</label>
+                            <input class="form-control" type="file" id="file" name="file" accept=".fb2,.epub" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload me-1"></i>Загрузить книгу
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

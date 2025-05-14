@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль - {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Информация о пользователе -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="avatar-container mb-3 d-flex flex-column align-items-center justify-content-center">
+                        {% if user.avatar_path %}
+                            <img src="{{ url_for('static', filename=user.avatar_path) }}" 
+                                 alt="Аватар" class="rounded-circle avatar-img">
+                        {% else %}
+                            <div class="avatar-placeholder">
+                                <i class="fas fa-user fa-3x"></i>
+                            </div>
+                        {% endif %}
+                        <button class="btn btn-sm btn-outline-primary mt-2 mb-2" 
+                                onclick="document.getElementById('avatarInput').click()">
+                            <i class="fas fa-camera"></i> Изменить
+                        </button>
+                        <input type="file" id="avatarInput" style="display: none" 
+                               accept="image/*" onchange="uploadAvatar(this.files[0])">
+                        <h4 class="mt-2">{{ user.username }}</h4>
+                    </div>
+                    <p class="text-muted">
+                        <i class="fas fa-calendar-alt"></i> 
+                        На сайте с {{ user.created_at.strftime('%d.%m.%Y') }}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">Статистика</h5>
+                    <ul class="list-unstyled">
+                        <li>
+                            <i class="fas fa-book"></i> Прочитано книг: 
+                            <span class="badge bg-primary">{{ user.books_read }}</span>
+                        </li>
+                        <li>
+                            <i class="fas fa-star"></i> Оценено книг: 
+                            <span class="badge bg-primary">{{ user.books_rated }}</span>
+                        </li>
+                        <li>
+                            <i class="fas fa-star-half-alt"></i> Средняя оценка: 
+                            <span class="badge bg-primary">
+                                {{ "%.1f"|format(user.average_rating|default(0)) }}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">Редактировать профиль</h5>
+                    <form action="{{ url_for('profile.update_profile') }}" method="POST">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                   value="{{ user.email|default('') }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="bio" class="form-label">О себе</label>
+                            <textarea class="form-control" id="bio" name="bio" rows="3">{{ user.bio|default('') }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Сохранить
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Последние прочитанные книги -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Последние прочитанные книги</h5>
+                    {% if recent_books %}
+                        <div class="list-group">
+                            {% for book in recent_books %}
+                                <a href="{{ url_for('books.read_book', book_id=book.id) }}" 
+                                   class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ book.title }}</h6>
+                                        <small>{{ book.last_read.strftime('%d.%m.%Y') }}</small>
+                                    </div>
+                                    <div class="progress mt-2" style="height: 5px;">
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: {{ book.progress }}%"
+                                             aria-valuenow="{{ book.progress }}" 
+                                             aria-valuemin="0" aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Вы еще не читали книг</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Последние оценки -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">Последние оценки</h5>
+                    {% if recent_ratings %}
+                        <div class="list-group">
+                            {% for rating in recent_ratings %}
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ rating.title }}</h6>
+                                        <div>
+                                            {% for i in range(5) %}
+                                                <i class="fas fa-star {% if i < rating.rating %}text-warning{% else %}text-muted{% endif %}"></i>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% if rating.review %}
+                                        <p class="mb-1">{{ rating.review }}</p>
+                                    {% endif %}
+                                    <small class="text-muted">
+                                        {{ rating.created_at.strftime('%d.%m.%Y') }}
+                                    </small>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Вы еще не оценили ни одной книги</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Избранные книги -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">Избранные книги</h5>
+                    {% if favorite_books %}
+                        <div class="list-group">
+                            {% for book in favorite_books %}
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ book.title }}</h6>
+                                            <p class="mb-1 text-muted">{{ book.author }}</p>
+                                        </div>
+                                        <div>
+                                            <a href="{{ url_for('books.read_book', book_id=book.id) }}" 
+                                               class="btn btn-sm btn-primary">
+                                                <i class="fas fa-book-reader"></i> Читать
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    onclick="removeFromFavorites({{ book.id }})">
+                                                <i class="fas fa-heart-broken"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">У вас пока нет избранных книг</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-container {
+    position: relative;
+    width: 150px;
+    height: auto;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.avatar-img {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.avatar-placeholder {
+    width: 150px;
+    height: 150px;
+    background-color: #f8f9fa;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+}
+
+.progress {
+    height: 5px;
+    margin-top: 5px;
+}
+
+/* --- Исправление для тёмной и сепия-темы --- */
+[data-theme="dark"] .list-group-item {
+    background-color: #23272b !important;
+    color: #fff !important;
+    border-color: #444 !important;
+}
+[data-theme="sepia"] .list-group-item {
+    background-color: #f9f6f1 !important;
+    color: #5b4636 !important;
+    border-color: #e0cfa9 !important;
+}
+[data-theme="dark"] .progress {
+    background-color: #444 !important;
+}
+[data-theme="dark"] .progress-bar {
+    background-color: #a67c52 !important;
+}
+[data-theme="sepia"] .progress {
+    background-color: #e0cfa9 !important;
+}
+[data-theme="sepia"] .progress-bar {
+    background-color: #a67c52 !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function uploadAvatar(file) {
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
+    fetch('{{ url_for("profile.upload_avatar") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Ошибка при загрузке аватара: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при загрузке аватара');
+    });
+}
+
+async function removeFromFavorites(bookId) {
+    try {
+        const response = await fetch(`/books/unfavorite/${bookId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            // Перезагружаем страницу для обновления списка
+            window.location.reload();
+        } else {
+            console.error('Ошибка при удалении из избранного:', data.error);
+        }
+    } catch (error) {
+        console.error('Ошибка при удалении из избранного:', error);
+    }
+}
+</script>
+{% endblock %} 
