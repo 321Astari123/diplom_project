@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Модерация книг</h2>
+    
+    {% if books %}
+    <div class="row">
+        {% for book in books %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card">
+                {% if book.cover_filename %}
+                <img src="{{ url_for('static', filename='uploads/covers/' + book.cover_filename) }}" 
+                     class="card-img-top" style="height: 300px; object-fit: cover;" alt="Обложка">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ book.title }}</h5>
+                    <p class="card-text">
+                        <strong>Автор:</strong> {{ book.author }}<br>
+                        <strong>Жанр:</strong> {{ book.genre or 'Без жанра' }}<br>
+                        <strong>Загружено:</strong> {{ book.upload_date.strftime('%d.%m.%Y') }}
+                    </p>
+                    {% if book.description %}
+                    <p class="card-text text-muted">{{ book.description[:100] }}...</p>
+                    {% endif %}
+                    <div class="btn-group w-100">
+                        <a href="{{ url_for('books.moderate_book', book_id=book.id, action='approve') }}" 
+                           class="btn btn-success">Одобрить</a>
+                        <a href="{{ url_for('books.moderate_book', book_id=book.id, action='reject') }}" 
+                           class="btn btn-danger">Отклонить</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>Нет книг, ожидающих модерации.
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 
