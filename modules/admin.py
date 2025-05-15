@@ -354,3 +354,36 @@ def approve_book(book_id):
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+
+@admin_bp.route('/genres', methods=['GET', 'POST'])
+@login_required
+def manage_genres():
+    if not current_user.is_admin:
+        flash('Нет доступа', 'danger')
+        return redirect(url_for('books.library'))
+    db = get_db()
+    cursor = db.cursor(MySQLdb.cursors.DictCursor)
+    if request.method == 'POST':
+        new_genre = request.form.get('new_genre')
+        if new_genre:
+            cursor.execute("INSERT IGNORE INTO genres (name) VALUES (%s)", (new_genre.strip(),))
+            db.commit()
+            flash('Жанр добавлен!', 'success')
+    cursor.execute("SELECT * FROM genres ORDER BY name")
+    genres = cursor.fetchall()
+    return render_template('admin/manage_genres.html', genres=genres)
+
+
+@admin_bp.route('/genres/delete/<int:genre_id>', methods=['POST'])
+@login_required
+def delete_genre(genre_id):
+    if not current_user.is_admin:
+        flash('Нет доступа', 'danger')
+        return redirect(url_for('books.library'))
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM genres WHERE id = %s", (genre_id,))
+    db.commit()
+    flash('Жанр удалён!', 'success')
+    return redirect(url_for('admin.manage_genres'))

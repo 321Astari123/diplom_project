@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Управление жанрами</h2>
+    <form method="post" class="mb-3">
+        <div class="input-group">
+            <input type="text" name="new_genre" class="form-control" placeholder="Новый жанр" required>
+            <button class="btn btn-primary" type="submit">Добавить</button>
+        </div>
+    </form>
+    <ul class="list-group">
+        {% for genre in genres %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ genre.name }}
+            <form method="post" action="{{ url_for('admin.delete_genre', genre_id=genre.id) }}" style="display:inline;">
+                <button class="btn btn-danger btn-sm" type="submit" onclick="return confirm('Удалить жанр?')">Удалить</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %} 
