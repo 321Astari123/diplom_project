@@ -92,7 +92,7 @@
                 </div>
                 {% endif %}
                 {% if book.cover_path and (book.cover_path|length > 0) %}
-                <img src="{{ url_for('static', filename='uploads/covers/' + book.cover_path) }}" 
+                <img src="{{ url_for('static', filename=book.cover_path) }}" 
                      class="card-img-top book-cover" alt="{{ book.title }}"
                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                 <div class="book-cover-placeholder" style="display:none;">

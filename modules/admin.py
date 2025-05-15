@@ -227,8 +227,19 @@ def update_book_with_cover(book_id):
     try:
         db = get_db()
         cursor = db.cursor()
-        title = request.form.get('editTitle') or request.form.get('title')
-        author = request.form.get('editAuthor') or request.form.get('author')
+        # Получаем текущие значения из БД
+        cursor.execute("SELECT title, author FROM books WHERE id=%s", (book_id,))
+        current = cursor.fetchone()
+        if not current:
+            return jsonify({'success': False, 'error': 'Книга не найдена'}), 404
+
+        # Используем значения из формы, если они есть, иначе из БД
+        title = request.form.get('editTitle') or request.form.get('title') or current[0]
+        author = request.form.get('editAuthor') or request.form.get('author') or current[1]
+
+        if not title or not author:
+            return jsonify({'success': False, 'error': 'Название и автор не могут быть пустыми'}), 400
+
         genres = request.form.getlist('genres')
         # Обработка обложки
         cover_file = request.files.get('cover')
@@ -243,24 +254,30 @@ def update_book_with_cover(book_id):
             cover_filename = f"book_{book_id}{ext}"
             full_cover_path = os.path.join(cover_dir, cover_filename)
             cover_file.save(full_cover_path)
-            cover_path = os.path.join('covers', cover_filename)
-            # Обновляем путь к обложке
+            cover_path = f"uploads/covers/{cover_filename}"
             cursor.execute("UPDATE books SET cover_path=%s WHERE id=%s", (cover_path, book_id))
+            db.commit()
+
         # Обновляем основную информацию о книге
         cursor.execute("""
             UPDATE books SET title=%s, author=%s WHERE id=%s
         """, (title, author, book_id))
+
         # Обновляем жанры
         cursor.execute("DELETE FROM book_genres WHERE book_id = %s", (book_id,))
         for genre in genres:
             cursor.execute("INSERT IGNORE INTO genres (name) VALUES (%s)", (genre,))
             cursor.execute("SELECT id FROM genres WHERE name = %s", (genre,))
-            genre_id = cursor.fetchone()[0]
-            cursor.execute("INSERT INTO book_genres (book_id, genre_id) VALUES (%s, %s)", (book_id, genre_id))
+            genre_row = cursor.fetchone()
+            if genre_row and genre_row[0]:
+                genre_id = genre_row[0]
+                cursor.execute("INSERT INTO book_genres (book_id, genre_id) VALUES (%s, %s)", (book_id, genre_id))
+            else:
+                logger.error(f"Жанр не найден или не добавлен: {genre}")
         db.commit()
         return jsonify({'success': True})
     except Exception as e:
-        logger.error(f"Ошибка при обновлении книги: {str(e)}")
+        logger.error(f"Ошибка при обновлении книги: {repr(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -387,3 +404,32 @@ def delete_genre(genre_id):
     db.commit()
     flash('Жанр удалён!', 'success')
     return redirect(url_for('admin.manage_genres'))
+
+
+@admin_bp.route('/book/<int:book_id>/cover', methods=['POST'])
+@login_required
+@admin_required
+def upload_book_cover(book_id):
+    """Загружает или заменяет обложку книги без изменения других полей"""
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cover_file = request.files.get('cover')
+        if not cover_file or not cover_file.filename:
+            return jsonify({'success': False, 'error': 'Файл не выбран'}), 400
+        filename = secure_filename(cover_file.filename)
+        ext = os.path.splitext(filename)[1].lower()
+        if ext not in ['.jpg', '.jpeg', '.png']:
+            return jsonify({'success': False, 'error': 'Допустимы только JPG и PNG'}), 400
+        cover_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'covers')
+        os.makedirs(cover_dir, exist_ok=True)
+        cover_filename = f"book_{book_id}{ext}"
+        full_cover_path = os.path.join(cover_dir, cover_filename)
+        cover_file.save(full_cover_path)
+        cover_path = f"uploads/covers/{cover_filename}"
+        cursor.execute("UPDATE books SET cover_path=%s WHERE id=%s", (cover_path, book_id))
+        db.commit()
+        return jsonify({'success': True, 'cover_path': cover_path})
+    except Exception as e:
+        logger.error(f"Ошибка при загрузке обложки: {repr(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500

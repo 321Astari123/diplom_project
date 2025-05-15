@@ -186,8 +186,11 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="editCover" class="form-label">Обложка (jpg/png, опционально)</label>
-                        <input type="file" class="form-control" id="editCover" name="cover">
+                        <label for="editCover" class="form-label">Обложка:</label>
+                        <input type="file" class="form-control" id="editCover" name="cover" accept="image/*">
+                        <button type="button" class="btn btn-primary mt-2" onclick="uploadCover()">Загрузить обложку</button>
+                        <div id="cover-upload-status"></div>
+                        <img id="cover-preview" src="" style="max-width: 120px; margin-top: 1em;">
                     </div>
                 </form>
             </div>
@@ -256,6 +259,13 @@ async function editBook(bookId) {
         document.querySelectorAll('#editGenres input[type="checkbox"]').forEach(checkbox => {
             checkbox.checked = book.genres.includes(checkbox.value);
         });
+        // Обновляем превью обложки
+        const coverPreview = document.getElementById('cover-preview');
+        if (book.cover_path) {
+            coverPreview.src = '/static/' + book.cover_path;
+        } else {
+            coverPreview.src = '';
+        }
         new bootstrap.Modal(document.getElementById('editBookModal')).show();
     } catch (error) {
         console.error('Ошибка при загрузке данных книги:', error);
@@ -313,5 +323,39 @@ document.querySelectorAll('.approve-book-btn').forEach(function(btn) {
         });
     });
 });
+
+function uploadCover() {
+    const bookId = document.getElementById('editBookId').value;
+    const fileInput = document.getElementById('editCover');
+    const statusDiv = document.getElementById('cover-upload-status');
+    const previewImg = document.getElementById('cover-preview');
+
+    if (!fileInput.files.length) {
+        statusDiv.textContent = "Пожалуйста, выберите файл.";
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('cover', fileInput.files[0]);
+
+    fetch(`/admin/book/${bookId}/cover`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusDiv.textContent = "Обложка успешно загружена!";
+            if (data.cover_path) {
+                previewImg.src = '/static/' + data.cover_path + '?t=' + new Date().getTime();
+            }
+        } else {
+            statusDiv.textContent = "Ошибка: " + (data.error || "Неизвестная ошибка");
+        }
+    })
+    .catch(err => {
+        statusDiv.textContent = "Ошибка загрузки.";
+    });
+}
 </script>
 {% endblock %}
