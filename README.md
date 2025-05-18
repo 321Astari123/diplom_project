@@ -82,4 +82,4 @@ python main.py
 ## Для преподавателя
 - Для запуска требуется MySQL и Python 3.8+
 - Все зависимости указаны в requirements.txt
-- Структура БД — в maindb.sql
+- Структура БД — в init_db.sql
