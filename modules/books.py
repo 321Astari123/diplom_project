@@ -234,7 +234,7 @@ def update_progress(book_id):
 @login_required
 def upload_book():
     db = get_db()
-    cursor = db.cursor()
+    cursor = db.cursor(MySQLdb.cursors.DictCursor)
     if request.method == 'POST':
         import time
         max_retries = 3
@@ -243,8 +243,13 @@ def upload_book():
                 # Проверка лимита для обычных пользователей
                 if not current_user.is_admin:
                     today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-                    cursor.execute("SELECT COUNT(*) FROM books WHERE added_by = %s AND created_at >= %s", (current_user.id, today_start))
-                    count_today = cursor.fetchone()[0]
+                    cursor.execute("SELECT COUNT(*) as count FROM books WHERE added_by = %s AND created_at >= %s", (current_user.id, today_start))
+                    result = cursor.fetchone()
+
+                    count_today = 0
+                    if result and 'count' in result:
+                        count_today = result['count']
+
                     if count_today >= 5:
                         flash('Вы можете загружать не более 5 книг в день. Попробуйте завтра.', 'warning')
                         return redirect(url_for('books.upload_book'))
@@ -278,25 +283,76 @@ def upload_book():
 
                 # Парсим метаданные
                 parser = BookParser()
-                metadata = parser.parse_metadata(file_path)
-                logger.debug(f"Получены метаданные: {metadata}")
+                try:
+                    metadata = parser.parse_metadata(file_path)
+                    # --- ДОБАВЛЕНА ОЧЕНЬ БЛИЗКАЯ ЛОГ-СТРОКА ---
+                    logger.debug("!!! Сразу после parser.parse_metadata. Метаданные получены.")
+                    # -----------------------------------------
+                    logger.debug(f"Получены метаданные: {metadata}")
+                    # --- Добавлено для отладки KeyError: 0 ---
+                    logger.debug(f"Тип метаданных: {type(metadata)}")
+                    if isinstance(metadata, dict):
+                        logger.debug(f"Ключи в метаданных: {metadata.keys()}")
+                        if 'genres' in metadata:
+                             logger.debug(f"Тип metadata['genres']: {type(metadata['genres'])}")
+                             logger.debug(f"Содержимое metadata['genres']: {metadata['genres']}")
+                    # ---------------------------------------
+                except Exception as parser_error:
+                    # Если парсинг не удался, логируем ошибку и возвращаем сообщение пользователю
+                    logger.error(f"Ошибка парсинга метаданных книги {filename}: {str(parser_error)}")
+                    # Удаляем сохраненный файл книги, так как он не был успешно обработан
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                    flash(f'Ошибка при обработке файла книги: {str(parser_error)}', 'danger')
+                    return redirect(url_for('books.upload_book'))
 
                 # Сохраняем обложку
                 cover_path = None
-                if metadata.get('cover'):
-                    cover_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'covers')
-                    os.makedirs(cover_dir, exist_ok=True)
-                    cover_filename = f"{os.path.splitext(filename)[0]}.jpg"
-                    cover_path = os.path.join('covers', cover_filename)
-                    parser.save_cover(metadata['cover'], os.path.join(current_app.config['UPLOAD_FOLDER'], cover_path))
+                book_cover_data = metadata.get('cover') # Получаем данные обложки
+                
+                # --- Добавлено для устойчивости и отладки ---
+                # Проверяем, что данные обложки не None и имеют ожидаемый формат перед использованием
+                # BookParser, вероятно, возвращает бинарные данные или путь, но точно не число 0, список или словарь, которые вызвали бы KeyError:0
+                if book_cover_data and not isinstance(book_cover_data, (int, float, list, tuple, dict)): # Добавляем проверки на неожидаемые типы, особенно число 0
+                # ---------------------------------------
+                    try:
+                        cover_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'covers')
+                        os.makedirs(cover_dir, exist_ok=True)
+                        cover_filename = f"{os.path.splitext(filename)[0]}.jpg"
+                        cover_path = os.path.join('covers', cover_filename)
+                        parser.save_cover(book_cover_data, os.path.join(current_app.config['UPLOAD_FOLDER'], cover_path))
+                    except Exception as cover_save_error:
+                        logger.error(f"Ошибка при сохранении обложки для книги {filename}: {str(cover_save_error)}")
+                        # Продолжаем без обложки, не прерывая загрузку книги
+                        cover_path = None # Сбрасываем cover_path на None при ошибке сохранения
 
-                # Сохраняем информацию о книге в БД
+                # --- Дополнительное детальное логирование перед использованием метаданных ---
+                logger.debug(f"Проверка 'cover': {metadata.get('cover')}") # Перед доступом metadata.get('cover')
+                # Перед обработкой обложки. (логирование уже добавлено)
+                # ... код сохранения обложки ...
+
+                # Перед сохранением в БД
                 file_format = 'fb2' if filename.lower().endswith('.fb2') else 'epub'
                 author = metadata.get('author')
                 if not author or not isinstance(author, str) or not author.strip():
                     author = 'Неизвестный автор'
                 is_approved = True if current_user.is_admin else False
                 now = datetime.now()
+
+                logger.debug(f"Проверка 'title': {metadata.get('title')}") # Перед доступом metadata.get('title')
+                logger.debug(f"Проверка 'author': {author}") # Перед использованием author (уже обработан)
+                logger.debug(f"Проверка 'filename': {filename}") # Перед использованием filename
+                logger.debug(f"Проверка 'cover_path': {cover_path}") # Перед использованием cover_path
+                logger.debug(f"Проверка 'file_format': {file_format}") # Перед использованием file_format
+                logger.debug(f"Проверка 'publication_year': {metadata.get('publication_year')}") # Перед доступом metadata.get('publication_year')
+                logger.debug(f"Проверка 'isbn': {metadata.get('isbn')}") # Перед доступом metadata.get('isbn')
+                logger.debug(f"Проверка 'language': {metadata.get('language')}") # Перед доступом metadata.get('language')
+                logger.debug(f"Проверка 'pages': {metadata.get('pages')}") # Перед доступом metadata.get('pages')
+                logger.debug(f"Проверка 'added_by': {current_user.id}")
+                logger.debug(f"Проверка 'is_approved': {is_approved}")
+                logger.debug(f"Проверка 'now': {now}")
+
+                # Сохраняем информацию о книге в БД
                 cursor.execute("""
                     INSERT INTO books (title, author, file_path, cover_path, file_format, publication_year, isbn, language, pages, added_by, is_approved, created_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -316,26 +372,61 @@ def upload_book():
                 ))
                 book_id = cursor.lastrowid
 
+                # Перед обработкой жанров
+                logger.debug(f"Проверка 'genres' перед обработкой: {metadata.get('genres')}") # Перед доступом metadata.get('genres')
                 # Сохраняем жанры
-                genres = metadata.get('genres', [])
-                if genres:
+                genres = metadata.get('genres', []) # Получаем список жанров
+                
+                # --- Добавлено для отладки и устойчивости ---
+                # Проверяем, что genres является списком или кортежем перед итерацией
+                if not isinstance(genres, (list, tuple)):
+                    logger.error(f"Неожиданный тип genres: {type(genres)}, ожидается список или кортеж.")
+                    genres = [] # Заменяем на пустой список, чтобы избежать ошибки в цикле
+                # ---------------------------------------
+
+                if genres: # Если список жанров (теперь гарантированно) не пустой
                     used_genre_ids = set()
                     for genre_name in genres:
+                        # Убедимся, что genre_name не None и не пустая строка
+                        if not genre_name or not genre_name.strip():
+                            continue
+                        
+                        # Ищем или создаем жанр
                         cursor.execute("""
                             INSERT IGNORE INTO genres (name)
                             VALUES (%s)
-                        """, (genre_name,))
+                        """, (genre_name.strip(),)) # Используем strip() на всякий случай
+
                         cursor.execute("""
                             SELECT id FROM genres WHERE name = %s
-                        """, (genre_name,))
+                        """, (genre_name.strip(),)) # И здесь тоже
+
                         genre_row = cursor.fetchone()
-                        genre_id = genre_row['id'] if genre_row and 'id' in genre_row else None
-                        if genre_id and genre_id not in used_genre_ids:
-                            cursor.execute("""
-                                INSERT INTO book_genres (book_id, genre_id)
-                                VALUES (%s, %s)
-                            """, (book_id, genre_id))
-                            used_genre_ids.add(genre_id)
+
+                        # --- Добавлено для отладки KeyError: 0 в жанрах ---
+                        logger.debug(f"Результат fetchone() для жанра '{genre_name.strip()}': {genre_row}")
+                        logger.debug(f"Тип fetchone() для жанра '{genre_name.strip()}': {type(genre_row)}")
+                        # -------------------------------------------------
+
+                        genre_id = None
+                        # Явно проверяем, что genre_row не None и что 'id' есть в словаре
+                        if genre_row is not None and 'id' in genre_row:
+                             genre_id = genre_row['id']
+                        # Если genre_row is None или нет ключа 'id', genre_id останется None
+
+                        if genre_id is not None and genre_id not in used_genre_ids:
+                            try:
+                                cursor.execute("""
+                                    INSERT INTO book_genres (book_id, genre_id)
+                                    VALUES (%s, %s)
+                                """, (book_id, genre_id))
+                                used_genre_ids.add(genre_id)
+                            except MySQLdb.IntegrityError:
+                                # Пропускаем, если связь книга-жанр уже существует
+                                logger.warning(f"Связь для книги {book_id} и жанра {genre_id} уже существует.")
+                                pass # Пропускаем, если такая связь уже есть
+                            except Exception as e:
+                                logger.error(f"Ошибка при связывании книги {book_id} с жанром {genre_id}: {str(e)}")
                 db.commit()
                 logger.debug("Книга успешно сохранена в БД")
 
@@ -366,7 +457,7 @@ def upload_book():
                     return redirect(url_for('books.upload_book'))
             except Exception as e:
                 db.rollback()
-                logger.error(f"Ошибка при загрузке книги: {str(e)}")
+                logger.error(f"Ошибка при загрузке книги: Тип ошибки: {type(e).__name__}, Подробности: {e.args}")
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return jsonify({'success': False, 'error': str(e)}), 400
                 flash(f'Ошибка при загрузке книги: {str(e)}', 'danger')

@@ -82,43 +82,48 @@ class BookParser:
             except UnicodeDecodeError:
                 content = content.decode('windows-1251')
             # Извлекаем метаданные
-            title = re.search(r'<title-info>.*?<book-title>(.*?)</book-title>', content, re.DOTALL)
+            title_match = re.search(r'<title-info>.*?<book-title>(.*?)</book-title>', content, re.DOTALL)
             # Собираем всех авторов
             authors = re.findall(r'<author>(.*?)</author>', content, re.DOTALL)
             author_list = []
             for author_block in authors:
-                first = re.search(r'<first-name>(.*?)</first-name>', author_block)
-                last = re.search(r'<last-name>(.*?)</last-name>', author_block)
-                if first and last:
-                    author_list.append(f"{first.group(1).strip()} {last.group(1).strip()}")
-                elif first:
-                    author_list.append(first.group(1).strip())
-                elif last:
-                    author_list.append(last.group(1).strip())
+                first_match = re.search(r'<first-name>(.*?)</first-name>', author_block)
+                last_match = re.search(r'<last-name>(.*?)</last-name>', author_block)
+                if first_match and last_match:
+                    author_list.append(f"{first_match.group(1).strip()} {last_match.group(1).strip()}")
+                elif first_match:
+                    author_list.append(first_match.group(1).strip())
+                elif last_match:
+                    author_list.append(last_match.group(1).strip())
             author = ', '.join(author_list) if author_list else None
-            genres = re.findall(r'<title-info>.*?<genre>(.*?)</genre>', content, re.DOTALL)
-            cover = re.search(r'<coverpage>.*?<image.*?href="#(.*?)".*?>', content, re.DOTALL)
+            genres_matches = re.findall(r'<title-info>.*?<genre>(.*?)</genre>', content, re.DOTALL)
+            logger.debug(f"Найдены жанры в FB2: {genres_matches}")
+            cover_match = re.search(r'<coverpage>.*?<image.*?href="#(.*?)".*?>', content, re.DOTALL)
             # Дополнительные метаданные
-            year = re.search(r'<publish-info>.*?<year>(.*?)</year>', content, re.DOTALL)
-            isbn = re.search(r'<publish-info>.*?<isbn>(.*?)</isbn>', content, re.DOTALL)
-            lang = re.search(r'<title-info>.*?<lang>(.*?)</lang>', content, re.DOTALL)
+            year_match = re.search(r'<publish-info>.*?<year>(.*?)</year>', content, re.DOTALL)
+            isbn_match = re.search(r'<publish-info>.*?<isbn>(.*?)</isbn>', content, re.DOTALL)
+            lang_match = re.search(r'<title-info>.*?<lang>(.*?)</lang>', content, re.DOTALL)
             # Оцениваем количество страниц по количеству слов только в <body>
-            body = re.search(r'<body.*?>(.*?)</body>', content, re.DOTALL)
-            body_text = re.sub(r'<[^>]+>', '', body.group(1)) if body else ''
+            body_match = re.search(r'<body.*?>(.*?)</body>', content, re.DOTALL)
+            body_text = re.sub(r'<[^>]+>', '', body_match.group(1)) if body_match and body_match.group(1) else ''
             words = re.findall(r'\w+', body_text)
             pages = max(1, len(words) // 250)
             # Обрабатываем результаты
-            title = title.group(1).strip() if title else 'Без названия'
-            genres = [g.strip() for g in genres] if genres else []
-            cover_id = cover.group(1) if cover else None
+            title = title_match.group(1).strip() if title_match and title_match.group(1) else 'Без названия'
+            genres = [g.strip() for g in genres_matches if g and g.strip()] if genres_matches else []
+            cover_id = cover_match.group(1) if cover_match and cover_match.group(1) else None
             cover_data = None
             if cover_id:
-                cover_match = re.search(rf'<binary id="{cover_id}".*?>(.*?)</binary>', content, re.DOTALL)
-                if cover_match:
-                    cover_data = base64.b64decode(cover_match.group(1))
-            publication_year = year.group(1).strip() if year else None
-            isbn_val = isbn.group(1).strip() if isbn else None
-            language = lang.group(1).strip() if lang else None
+                cover_binary_match = re.search(rf'<binary id=\"{re.escape(cover_id)}\".*?>(.*?)</binary>', content, re.DOTALL)
+                if cover_binary_match and cover_binary_match.group(1):
+                    try:
+                        cover_data = base64.b64decode(cover_binary_match.group(1))
+                    except (base64.Error, TypeError) as base64_error:
+                        logger.error(f"Ошибка декодирования base64 обложки для {file_path}: {str(base64_error)}")
+                        cover_data = None
+            publication_year = year_match.group(1).strip() if year_match and year_match.group(1) else None
+            isbn_val = isbn_match.group(1).strip() if isbn_match and isbn_match.group(1) else None
+            language = lang_match.group(1).strip() if lang_match and lang_match.group(1) else None
             logger.debug(f"Извлечены метаданные FB2: title={title}, author={author}, genres={genres}, year={publication_year}, isbn={isbn_val}, lang={language}, pages={pages}")
             return {
                 'title': title,
@@ -151,6 +156,7 @@ class BookParser:
                 authors = re.findall(r'<dc:creator[^>]*>(.*?)</dc:creator>', content)
                 author = ', '.join([a.strip() for a in authors if a.strip()]) if authors else None
                 genres = re.findall(r'<dc:subject>(.*?)</dc:subject>', content)
+                logger.debug(f"Найдены жанры в EPUB: {genres}")
                 cover_id = re.search(r'<meta name="cover" content="(.*?)"/>', content)
                 year = re.search(r'<dc:date>(.*?)</dc:date>', content)
                 isbn = re.search(r'<dc:identifier[^>]*>(.*?)</dc:identifier>', content)
