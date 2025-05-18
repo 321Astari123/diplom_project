@@ -40,7 +40,7 @@ venv\Scripts\activate     # для Windows
 pip install -r requirements.txt
 ```
 
-4. Создайте файл `.env` или скопируйте `.env.example`:
+4. Создайте файл `.env` 
 ```
 FLASK_APP=main.py
 FLASK_ENV=development
