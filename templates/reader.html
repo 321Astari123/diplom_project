@@ -5,154 +5,519 @@
 {% block extra_css %}
 <style>
     :root {
-        --reader-bg: #f5ecd7;
-        --reader-panel-bg: #f8f5e6;
-        --reader-text: #3a2c1a;
-        --reader-accent: #a67c52;
-        --reader-shadow: 0 8px 32px rgba(166,124,82,0.13);
-        --reader-radius: 32px;
-        --reader-font: 'Georgia', 'Times New Roman', Times, serif;
-        --reader-ui-font: 'Inter', 'Arial', sans-serif;
+        --reader-bg: #ffffff;
+        --reader-text: #000000;
+        --reader-font: 'Arial', sans-serif;
     }
-    
-    .reader-container {
-        background: var(--reader-bg);
-        color: var(--reader-text);
-        font-family: var(--reader-font);
-        padding: 2.5em 2em 2em 2em;
-        border-radius: var(--reader-radius);
-        box-shadow: var(--reader-shadow);
-        max-width: 1200px;
-        margin: 2em auto;
-        min-height: 70vh;
+
+    [data-theme="dark"] {
+        --reader-bg: #121212;
+        --reader-text: #ffffff;
+    }
+
+    .reader-controls {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(90deg, #f4ecd8 0%, #a67c52 100%);
+        min-height: 72px;
+        height: 72px;
+        box-shadow: 0 4px 16px 0 rgba(166,124,82,0.10), 0 1.5px 0 #e0cfa9;
+        border-bottom-left-radius: 1.2rem;
+        border-bottom-right-radius: 1.2rem;
+        z-index: 1000;
         display: flex;
-        flex-direction: row;
-        gap: 2em;
+        align-items: center;
     }
-    
-    .reader-book {
-        flex: 1 1 0;
-        column-count: 2;
-        column-gap: 3em;
-        font-size: 1.18em;
-        line-height: 1.7;
-        letter-spacing: 0.01em;
-        text-align: justify;
-        min-height: 60vh;
-        background: transparent;
+
+    [data-theme="dark"] .reader-controls {
+        background: linear-gradient(90deg, #2c3e50 0%, #a67c52 100%);
     }
-    
-    .reader-book h2, .reader-book h3, .reader-book h4 {
-        color: var(--reader-accent);
-        break-after: avoid;
+
+    [data-theme="sepia"] .reader-controls {
+        background: linear-gradient(90deg, #f4ecd8 0%, #a67c52 100%);
     }
-    
-    .reader-panel {
-        min-width: 260px;
-        max-width: 320px;
-        background: var(--reader-panel-bg);
-        border-radius: 24px;
-        box-shadow: 0 2px 12px rgba(166,124,82,0.10);
-        padding: 1.5em 1.2em;
+
+    .reader-nav {
         display: flex;
-        flex-direction: column;
-        gap: 1.2em;
-        font-family: var(--reader-ui-font);
+        align-items: center;
+        gap: 15px;
     }
-    
-    .reader-panel label {
-        font-weight: 600;
-        margin-bottom: 0.3em;
-    }
-    
-    .reader-panel input[type=range] {
-        width: 100%;
-    }
-    
-    .reader-panel .btn {
-        width: 100%;
-        margin-top: 0.5em;
-    }
-    
-    .reader-progress {
-        width: 100%;
-        height: 8px;
-        background: #e6d3b3;
-        border-radius: 6px;
-        margin-top: 2em;
+
+    .reader-settings {
         position: relative;
     }
-    
-    .reader-progress-bar {
-        height: 100%;
-        background: var(--reader-accent);
-        border-radius: 6px;
-        transition: width 0.3s;
+
+    .settings-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        padding: 10px;
+        display: none;
+        min-width: 200px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        color: var(--text-color);
     }
-    
-    @media (max-width: 900px) {
-        .reader-container { flex-direction: column; padding: 1.2em 0.5em; }
-        .reader-panel { max-width: 100%; min-width: 0; }
-        .reader-book { column-count: 1; font-size: 1.05em; }
+
+    .settings-dropdown.show {
+        display: block;
     }
-    
-    @media (max-width: 600px) {
-        .reader-container { border-radius: 12px; }
+
+    .theme-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 5px;
+        cursor: pointer;
+    }
+
+    .theme-option:hover {
+        background-color: var(--secondary-color);
+    }
+
+    .theme-preview {
+        width: 20px;
+        height: 20px;
+        border-radius: 3px;
+    }
+
+    .font-option {
+        padding: 5px;
+        cursor: pointer;
+    }
+
+    .font-option:hover {
+        background-color: var(--secondary-color);
+    }
+
+    .font-size-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background-color: var(--secondary-color);
+        padding: 5px 10px;
+        border-radius: 5px;
+    }
+
+    .font-size-btn {
+        background: var(--primary-color);
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 5px 10px;
+        border-radius: 3px;
+        transition: background-color 0.2s;
+    }
+
+    .font-size-btn:hover {
+        background-color: var(--primary-color);
+        opacity: 0.9;
+    }
+
+    .font-size-value {
+        color: var(--text-color);
+        font-weight: bold;
+        min-width: 30px;
+        text-align: center;
+    }
+
+    .page-nav {
+        display: flex;
+        gap: 10px;
+    }
+
+    .page-nav-btn {
+        background: none;
+        border: 1px solid white;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .page-nav-btn:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .back-to-library {
+        color: var(--text-color) !important;
+        background: rgba(255,255,255,0.85);
+        border: 1.5px solid #a67c52;
+        border-radius: 1.5rem;
+        font-weight: 500;
+        font-size: 1.08rem;
+        min-width: 150px;
+        white-space: nowrap;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px 0 rgba(166,124,82,0.10);
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        text-decoration: none;
+        padding: 0.35rem 1.4rem;
+        gap: 8px;
+    }
+
+    .back-to-library:hover {
+        background: #a67c52;
+        color: #fff !important;
+        box-shadow: 0 4px 16px 0 rgba(166,124,82,0.18);
+        text-decoration: none;
+    }
+
+    [data-theme="dark"] .back-to-library {
+        background: rgba(44,62,80,0.85);
+        color: #fff !important;
+        border-color: #a67c52;
+    }
+
+    [data-theme="sepia"] .back-to-library {
+        background: rgba(244,236,216,0.85);
+        color: #5b4636 !important;
+        border-color: #a67c52;
+    }
+
+    .progress-indicator {
+        color: white;
+        font-size: 14px;
+    }
+
+    .search-container {
+        position: relative;
+        margin-right: 10px;
+    }
+
+    .search-input-group {
+        display: flex;
+        gap: 5px;
+    }
+
+    .search-input {
+        padding: 5px 10px;
+        border: 1px solid white;
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        width: 200px;
+    }
+
+    .search-input::placeholder {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .search-options-btn {
+        background: none;
+        border: 1px solid white;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .search-options-btn:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .search-options {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        padding: 10px;
+        margin-top: 5px;
+        min-width: 200px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        z-index: 1001;
+    }
+
+    .search-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 0;
+        color: var(--text-color);
+    }
+
+    .search-option input[type="checkbox"] {
+        margin: 0;
+    }
+
+    .search-option label {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        max-height: 200px;
+        overflow-y: auto;
+        display: none;
+        z-index: 1001;
+        color: var(--text-color);
+    }
+
+    .search-results.show {
+        display: block;
+    }
+
+    .search-result {
+        padding: 5px 10px;
+        cursor: pointer;
+    }
+
+    .search-result:hover {
+        background-color: var(--secondary-color);
+    }
+
+    .highlight {
+        background-color: yellow;
+        color: black;
+    }
+
+    .search-nav {
+        display: flex;
+        gap: 5px;
+        margin-top: 5px;
+    }
+
+    .search-nav-btn {
+        background: none;
+        border: 1px solid white;
+        color: white;
+        padding: 2px 5px;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+
+    .search-nav-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .page-content a {
+        color: inherit !important;
+        text-decoration: none !important;
+        pointer-events: none;
+        cursor: default;
+    }
+
+    .reader-settings > .font-size-btn {
+        background: #fff;
+        border: 2px solid #a67c52;
+        color: #a67c52;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        box-shadow: 0 2px 8px 0 rgba(166,124,82,0.10);
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        margin-right: 0.5rem;
+        outline: none;
+    }
+    .reader-settings > .font-size-btn:hover, .reader-settings > .font-size-btn:focus {
+        background: #a67c52;
+        color: #fff;
+        box-shadow: 0 4px 16px 0 rgba(166,124,82,0.18);
+    }
+    [data-theme="dark"] .reader-settings > .font-size-btn {
+        background: #23272b;
+        color: #fff;
+        border-color: #a67c52;
+    }
+    [data-theme="dark"] .reader-settings > .font-size-btn:hover, [data-theme="dark"] .reader-settings > .font-size-btn:focus {
+        background: #a67c52;
+        color: #fff;
+    }
+    .settings-dropdown {
+        background: var(--card-bg);
+        border: 1.5px solid #e0cfa9;
+        border-radius: 1.2rem;
+        box-shadow: 0 8px 32px 0 rgba(166,124,82,0.18);
+        padding: 18px 20px 14px 20px;
+        min-width: 230px;
+        margin-top: 10px;
+        color: var(--text-color);
+        font-size: 1.05rem;
+    }
+    .settings-dropdown strong {
+        font-size: 1.08rem;
+        color: #a67c52;
+        display: block;
+        margin-bottom: 6px;
+    }
+    .settings-dropdown .theme-option,
+    .settings-dropdown .font-option {
+        border-radius: 0.5rem;
+        padding: 6px 8px;
+        margin-bottom: 2px;
+        transition: background 0.18s;
+    }
+    .settings-dropdown .theme-option:hover,
+    .settings-dropdown .font-option:hover {
+        background: var(--secondary-color);
+    }
+    .settings-dropdown .theme-option:last-child,
+    .settings-dropdown .font-option:last-child {
+        margin-bottom: 8px;
+    }
+    .settings-dropdown .font-size-controls {
+        background: none;
+        padding: 0;
+        border-radius: 0;
+        gap: 0.5rem;
+        margin-top: 10px;
+        justify-content: center;
+    }
+    .settings-dropdown .font-size-btn {
+        background: #f4ecd8;
+        color: #a67c52;
+        border: 1.5px solid #a67c52;
+        border-radius: 0.7rem;
+        font-size: 1.1rem;
+        font-weight: bold;
+        padding: 4px 14px;
+        transition: background 0.18s, color 0.18s;
+    }
+    .settings-dropdown .font-size-btn:hover {
+        background: #a67c52;
+        color: #fff;
+    }
+    .settings-dropdown .font-size-value {
+        font-size: 1.1rem;
+        color: #a67c52;
+        font-weight: bold;
+        min-width: 32px;
+        text-align: center;
+    }
+    .settings-dropdown hr {
+        border: none;
+        border-top: 1px solid #e0cfa9;
+        margin: 10px 0 12px 0;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="reader-container">
-  <div class="reader-book" id="readerBook">
-    <h2>{{ book.title }}</h2>
-    <h4>{{ book.author }}</h4>
-    <div id="bookContent">{{ content|safe }}</div>
-  </div>
-  <aside class="reader-panel">
-    <label for="fontSizeRange">Размер шрифта</label>
-    <input type="range" min="16" max="32" value="20" id="fontSizeRange">
-    <label for="lineHeightRange">Межстрочный интервал</label>
-    <input type="range" min="1.2" max="2.2" step="0.05" value="1.7" id="lineHeightRange">
-    <label>Фон</label>
-    <div style="display: flex; gap: 0.5em;">
-      <button class="btn btn-secondary" style="background:#f5ecd7;" onclick="setBg('#f5ecd7')">Бежевый</button>
-      <button class="btn btn-secondary" style="background:#fff; color:#222;" onclick="setBg('#fff')">Белый</button>
-      <button class="btn btn-secondary" style="background:#222; color:#fff;" onclick="setBg('#222')">Тёмный</button>
+    <div class="reader-controls">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div class="reader-nav">
+            <a href="{{ url_for('books.library') }}" class="back-to-library">
+                <i class="fas fa-arrow-left"></i>
+                <span>В библиотеку</span>
+            </a>
+            <div class="book-info ms-3">
+                <h5 class="mb-0 text-white">{{ book.title }}</h5>
+                <small class="text-white-50">
+                    {{ book.author }}
+                    {% if book.genres %}
+                        | {% for genre in book.genres %}
+                            <a href="{{ url_for('books.library', genre=genre) }}" 
+                               class="text-white-50 text-decoration-none">
+                                {{ genre_translations.get(genre, genre) }}
+                            </a>{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </small>
+            </div>
+            <div class="search-container">
+                <div class="search-input-group">
+                    <input type="text" class="search-input" placeholder="Поиск по тексту..." id="searchInput">
+                    <button class="search-options-btn" onclick="toggleSearchOptions()">
+                        <i class="fas fa-sliders-h"></i>
+                    </button>
+                </div>
+                <div class="search-options" id="searchOptions" style="display: none;">
+                    <div class="search-option">
+                        <input type="checkbox" id="caseSensitive" onchange="updateSearchOptions()">
+                        <label for="caseSensitive">Учитывать регистр</label>
+                    </div>
+                    <div class="search-option">
+                        <input type="checkbox" id="wholeWord" onchange="updateSearchOptions()">
+                        <label for="wholeWord">Целое слово</label>
+                    </div>
+                    <div class="search-option">
+                        <input type="checkbox" id="useRegex" onchange="updateSearchOptions()">
+                        <label for="useRegex">Регулярное выражение</label>
+                    </div>
+                </div>
+                <div class="search-results" id="searchResults"></div>
+                <div class="search-nav" id="searchNav" style="display: none;">
+                    <button class="search-nav-btn" onclick="prevMatch()" id="prevMatchBtn">
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                    <span id="matchCount" style="color: white;">0/0</span>
+                    <button class="search-nav-btn" onclick="nextMatch()" id="nextMatchBtn">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="reader-settings">
+                <button class="font-size-btn" onclick="toggleSettings()" aria-label="Настройки">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <div class="settings-dropdown" id="settingsDropdown">
+                    <div class="mb-2">
+                        <strong>Тема:</strong>
+                        <div class="theme-option" onclick="setTheme('light')">
+                            <div class="theme-preview" style="background: #ffffff; border: 1px solid #000;"></div>
+                            <span>Светлая</span>
+                        </div>
+                        <div class="theme-option" onclick="setTheme('dark')">
+                            <div class="theme-preview" style="background: #1a1a1a; border: 1px solid #fff;"></div>
+                            <span>Тёмная</span>
+                        </div>
+                        <div class="theme-option" onclick="setTheme('sepia')">
+                            <div class="theme-preview" style="background: #f4ecd8; border: 1px solid #000;"></div>
+                            <span>Сепия</span>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Шрифт:</strong>
+                        <div class="font-option" onclick="setFont('Arial')">Arial</div>
+                        <div class="font-option" onclick="setFont('Times New Roman')">Times New Roman</div>
+                        <div class="font-option" onclick="setFont('Georgia')">Georgia</div>
+                    </div>
+                    <div class="font-size-controls">
+                        <button class="font-size-btn" onclick="changeFontSize(-1)">
+                            <i class="fas fa-font"></i> -
+                        </button>
+                        <span class="font-size-value" id="fontSizeValue">18</span>
+                        <button class="font-size-btn" onclick="changeFontSize(1)">
+                            <i class="fas fa-font"></i> +
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <div class="progress-indicator">
+                Страница <span id="currentPage">1</span> из <span id="totalPages">{{ total_pages }}</span>
+            </div>
+        </div>
     </div>
-    <label for="fontFamilySelect">Шрифт</label>
-    <select id="fontFamilySelect" class="form-control">
-      <option value="Georgia">Georgia</option>
-      <option value="Times New Roman">Times New Roman</option>
-      <option value="Arial">Arial</option>
-      <option value="Verdana">Verdana</option>
-      <option value="Kazimir, serif">Kazimir</option>
-    </select>
-    <div class="reader-progress">
-      <div class="reader-progress-bar" id="progressBar" style="width: {{ (current_page / total_pages * 100) if total_pages else 0 }}%"></div>
-    </div>
-    <div style="margin-top:1em; font-size:0.95em; color:#a67c52;">Страница {{ current_page }} из {{ total_pages }}</div>
-  </aside>
 </div>
-<script>
-const book = document.getElementById('readerBook');
-const fontSizeRange = document.getElementById('fontSizeRange');
-const lineHeightRange = document.getElementById('lineHeightRange');
-const fontFamilySelect = document.getElementById('fontFamilySelect');
-function setBg(color) {
-  book.style.background = color;
-  book.style.transition = 'background 0.3s';
-}
-fontSizeRange.addEventListener('input', e => {
-  book.style.fontSize = e.target.value + 'px';
-});
-lineHeightRange.addEventListener('input', e => {
-  book.style.lineHeight = e.target.value;
-});
-fontFamilySelect.addEventListener('change', e => {
-  book.style.fontFamily = e.target.value;
-});
-</script>
+
+<div class="container">
+    <div class="page-content" id="pageContent" style="font-family: var(--reader-font, Arial), Arial, sans-serif;">
+        {{ content|safe }}
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -177,14 +542,14 @@ function calculatePageHeight() {
     const navHeight = document.querySelector('.reader-controls').offsetHeight;
     const windowHeight = window.innerHeight;
     const contentHeight = content.scrollHeight;
-    
+
     // Вычисляем реальную высоту страницы с учетом навигации
     pageHeight = windowHeight - navHeight;
-    
+
     // Пересчитываем общее количество страниц
     totalPages = Math.ceil(contentHeight / pageHeight);
     document.getElementById('totalPages').textContent = totalPages;
-    
+
     // Обновляем текущую страницу, если она вышла за пределы
     if (currentPage > totalPages) {
         currentPage = totalPages;
@@ -239,7 +604,7 @@ function changeFontSize(delta) {
     document.getElementById('pageContent').style.fontSize = `${currentFontSize}px`;
     document.getElementById('fontSizeValue').textContent = currentFontSize;
     localStorage.setItem('fontSize', currentFontSize);
-    
+
     // Пересчитываем высоту страницы после изменения шрифта
     setTimeout(calculatePageHeight, 100);
 }
@@ -269,7 +634,7 @@ function setTheme(theme) {
     const root = document.documentElement;
     const content = document.getElementById('pageContent');
     const body = document.body;
-    
+
     // Обновляем тему сайта
     if (theme === 'dark') {
         body.setAttribute('data-theme', 'dark');
@@ -284,7 +649,7 @@ function setTheme(theme) {
         content.style.backgroundColor = '#ffffff';
         content.style.color = '#000000';
     }
-    
+
     // Сохраняем настройки
     root.style.setProperty('--reader-bg', themes[theme].bg);
     root.style.setProperty('--reader-text', themes[theme].text);
@@ -316,10 +681,10 @@ function saveProgress(progress) {
         console.error('Некорректное значение прогресса:', progress);
         return;
     }
-    
+
     // Ограничиваем прогресс от 0 до 100
     progress = Math.max(0, Math.min(100, progress));
-    
+
     fetch('{{ url_for("books.update_progress", book_id=book.id) }}', {
                     method: 'POST',
                     headers: {
@@ -347,7 +712,7 @@ function saveProgress(progress) {
 function processImages() {
     const content = document.getElementById('pageContent');
     const images = content.getElementsByTagName('img');
-    
+
     for (let img of images) {
         const src = img.getAttribute('src');
         if (src) {
@@ -369,7 +734,7 @@ function syncTheme() {
     const body = document.body;
     const isDark = body.getAttribute('data-theme') === 'dark';
     const content = document.getElementById('pageContent');
-    
+
     if (isDark) {
         content.style.backgroundColor = '#121212';
         content.style.color = '#ffffff';
@@ -390,16 +755,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const currentPageElement = document.getElementById('currentPage');
         const totalPagesElement = document.getElementById('totalPages');
         const fontSizeValueElement = document.getElementById('fontSizeValue');
-        
+
         if (!pageContent || !currentPageElement || !totalPagesElement || !fontSizeValueElement) {
             throw new Error('Не найдены необходимые элементы на странице');
         }
-        
+
         // Восстанавливаем настройки
         const savedTheme = localStorage.getItem('readerTheme') || localStorage.getItem('theme') || 'light';
         const savedFont = localStorage.getItem('readerFont') || 'Arial';
         const savedFontSize = localStorage.getItem('fontSize');
-        
+
         // Устанавливаем настройки
         setTheme(savedTheme);
         setFont(savedFont);
@@ -410,22 +775,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 fontSizeValueElement.textContent = currentFontSize;
             }
         }
-        
+
         // Обновляем отображение текущей страницы
         currentPageElement.textContent = currentPage;
-        
+
         // Вычисляем высоту страницы после загрузки контента
         setTimeout(calculatePageHeight, 100);
-        
+
         // Прокручиваем к нужной странице после вычисления высоты
         setTimeout(scrollToPage, 200);
-        
+
         // Обрабатываем изображения
         processImages();
-        
+
         // Синхронизируем тему
         syncTheme();
-        
+
         // Сохраняем прогресс при прокрутке
         let scrollTimeout;
         window.addEventListener('scroll', function() {
@@ -435,17 +800,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 const scrollPosition = window.scrollY + window.innerHeight;
                 const documentHeight = document.documentElement.scrollHeight;
                 const progress = (scrollPosition / documentHeight) * 100;
-                
+
                 // Обновляем текущую страницу
                 currentPage = Math.floor(window.scrollY / window.innerHeight) + 1;
                 currentPageElement.textContent = currentPage;
-                
+
                 // Сохраняем прогресс и текущую страницу
                 saveProgress(progress);
                 localStorage.setItem('lastPage_' + bookId + '_user_' + userId, currentPage.toString());
             }, 100); // Задержка 100мс
         });
-        
+
         // Закрываем выпадающее меню при клике вне него
         document.addEventListener('click', function(event) {
             const dropdown = document.getElementById('settingsDropdown');
@@ -529,7 +894,7 @@ function highlightAllMatches() {
     const content = document.getElementById('pageContent');
     const text = content.textContent;
     let html = text;
-    
+
     // Подсвечиваем все совпадения
     for (let i = searchResults.length - 1; i >= 0; i--) {
         const match = searchResults[i];
@@ -538,9 +903,9 @@ function highlightAllMatches() {
         const after = html.substring(match.index + match.length);
         html = before + `<span class="search-match" data-index="${i}">${matchText}</span>` + after;
     }
-    
+
     content.innerHTML = html;
-    
+
     // Добавляем обработчики для подсветки при наведении
     const matches = content.getElementsByClassName('search-match');
     for (let match of matches) {
@@ -558,13 +923,13 @@ function updateSearchUI() {
     const matchCount = document.getElementById('matchCount');
     const prevBtn = document.getElementById('prevMatchBtn');
     const nextBtn = document.getElementById('nextMatchBtn');
-    
+
     if (searchResults.length > 0) {
         searchNav.style.display = 'flex';
         matchCount.textContent = `${currentMatchIndex + 1}/${searchResults.length}`;
         prevBtn.disabled = currentMatchIndex <= 0;
         nextBtn.disabled = currentMatchIndex >= searchResults.length - 1;
-        
+
         // Подсвечиваем текущее совпадение
         const matches = document.getElementsByClassName('search-match');
         for (let match of matches) {
@@ -647,7 +1012,7 @@ function updateSearchOptions() {
     searchOptions.caseSensitive = document.getElementById('caseSensitive').checked;
     searchOptions.wholeWord = document.getElementById('wholeWord').checked;
     searchOptions.regex = document.getElementById('useRegex').checked;
-    
+
     // Перезапускаем поиск с новыми опциями
     searchText();
 }
